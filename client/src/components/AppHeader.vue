@@ -21,9 +21,6 @@
 
         <!-- Right aligned nav items -->
         <b-navbar-nav class="ml-auto">
-          <b-nav-item :to="{name: 'snapshot'}">
-            Snapshots
-          </b-nav-item>
           <b-nav-item :to="{name: 'admin'}">
             Admin
           </b-nav-item>

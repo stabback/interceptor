@@ -1,14 +1,15 @@
 import app from '@server/app';
-import { Intercept, InterceptService } from '@server/resources/intercept';
-import { User, UserService } from '@server/resources/user';
+import { UserService, UserDocument } from '@server/resources/user';
 import supertest from 'supertest';
+import TestDB from '@server/test.db';
+import { Types } from 'mongoose';
 
 const request = supertest(app);
 
 describe('user route', () => {
-    beforeEach(() => {
-        UserService.items = [];
-    });
+    beforeAll(async () => await TestDB.connect());
+    afterEach(async () => await TestDB.clearDatabase());
+    afterAll(async () => await TestDB.closeDatabase());
 
     describe('GET /user', () => {
         it('returns a 200', (done) => {
@@ -24,8 +25,8 @@ describe('user route', () => {
         });
 
         it('returns a number of items equal to the number of users', async (done) => {
-            UserService.create('foo');
-            UserService.create('bar');
+            await UserService.create('foo');
+            await UserService.create('bar');
 
             const res = await request.get('/command/user');
             expect(res.body.items.length).toBe(2);
@@ -41,8 +42,6 @@ describe('user route', () => {
 
     describe('POST /user', () => {
         it('returns an error if the key param is not present', async (done) => {
-            UserService.create('foo');
-
             const res = await request
                 .post('/command/user')
                 .send({});
@@ -95,7 +94,7 @@ describe('user route', () => {
         });
 
         it('returns the user if found', async (done) => {
-            const foo = UserService.create('foo');
+            const foo = await UserService.create('foo');
 
             const res = await request.get(`/command/user/${foo.id}`);
             expect(res.body.id).toEqual(foo.id);
@@ -104,25 +103,25 @@ describe('user route', () => {
     });
 
     describe('DELETE /user/:user', () => {
-        let foo: User;
-        beforeEach(() => {
-            foo = UserService.create('foo');
+        let foo: UserDocument;
+        beforeEach(async () => {
+            foo = await UserService.create('foo');
         });
-        afterEach(() => {
+        afterEach(async () => {
             // Sanity check to make sure other items aren't being deleted
             expect(
-                UserService.get(foo.id),
-            ).toEqual(foo);
+                (await UserService.get(foo.id) as UserDocument).id,
+            ).toEqual(foo.id);
         });
 
-        it('404s if user is not found', async (done) => {
+        it('204s if user is not found', async (done) => {
             const res = await request.delete('/command/user/bar');
-            expect(res.status).toBe(404);
+            expect(res.status).toBe(204);
             done();
         });
 
         it('deletes the user', async (done) => {
-            const bar = UserService.create('bar');
+            const bar = await UserService.create('bar');
             const res = await request.delete(`/command/user/${bar.id}`);
             expect(res.status).toBe(204);
             expect(
@@ -133,9 +132,9 @@ describe('user route', () => {
     });
 
     describe('PATCH /user/:user', () => {
-        let foo: User;
-        beforeEach(() => {
-            foo = UserService.create('foo');
+        let foo: UserDocument;
+        beforeEach(async () => {
+            foo = await UserService.create('foo');
         });
 
         it('404s if user is not found', async (done) => {
@@ -144,37 +143,11 @@ describe('user route', () => {
             done();
         });
 
-        it('updates an user', async (done) => {
-
-            const before = await request.get(`/command/user/${foo.id}`);
-            expect(before.body.data.locked).toBeFalsy();
-
-            await request
+        it('errors if not an array of patch operations', (done) => {
+            request
                 .patch(`/command/user/${foo.id}`)
-                .send([{path: '/data/locked', op: 'replace', value: true}]);
-
-            const after = await request.get(`/command/user/${foo.id}`);
-            expect(after.body.data.locked).toBeTruthy();
-            done();
-        });
-
-        it('returns the updated user in the response', async (done) => {
-            const res = await request
-                .patch(`/command/user/${foo.id}`)
-                .send([{path: '/data/url', op: 'replace', value: 'FOO'}]);
-
-            expect(res.status).toBe(200);
-            expect(res.body.data.url).toBe('FOO');
-            done();
-        });
-
-        it('errors if not an array of patch operations', async (done) => {
-            const res = await request
-                .patch(`/command/user/${foo.id}`)
-                .send('foobar');
-
-            expect(res.status).toBe(400);
-            done();
+                .send('foobar')
+                .expect(400, done);
         });
     });
 });

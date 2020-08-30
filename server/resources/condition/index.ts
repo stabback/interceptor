@@ -1,2 +1,2 @@
-export * from './models';
-export { default as ConditionService, ConditionType } from './condition.service';
+export * from './condition.model';
+export * from './condition.service';

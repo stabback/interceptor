@@ -14,14 +14,14 @@
         label="Type"
       >
         <b-form-radio
-          v-model="state.form.type"
+          v-model="state.form.conditionType"
           value="url"
           name="condition-type"
         >
           Match a URL pattern
         </b-form-radio>
         <b-form-radio
-          v-model="state.form.type"
+          v-model="state.form.conditionType"
           value="method"
           name="condition-type"
         >
@@ -29,7 +29,7 @@
         </b-form-radio>
       </b-form-group>
       <b-form-group
-        v-if="state.form.type === 'method'"
+        v-if="state.form.conditionType === 'method'"
         label="Verb"
       >
         <b-form-radio
@@ -69,7 +69,7 @@
         </b-form-radio>
       </b-form-group>
       <b-form-group
-        v-if="state.form.type === 'url'"
+        v-if="state.form.conditionType === 'url'"
         id="configure-condition-pattern"
         label="Pattern"
         label-for="configure-condition-pattern-input"
@@ -100,9 +100,9 @@
 <script lang="ts">
 import Vue, { PropType } from 'vue';
 import Errors from '@client/components/Errors.vue';
-import { Intercept } from '@server/resources/intercept';
+import { Intercept } from '@client/store/resource/intercept';
 import { Domain } from 'domain';
-import { User } from '@server/resources/user';
+import { User } from '@client/store/resource/user';
 
 const DEFAULT_FORM: {
   rule: {
@@ -113,7 +113,7 @@ const DEFAULT_FORM: {
       pattern: string;
     };
   };
-  type: 'method' | 'url' | '';
+  conditionType: 'method' | 'url' | '';
 } = {
   rule: {
     method: {
@@ -123,7 +123,7 @@ const DEFAULT_FORM: {
       pattern: '',
     },
   },
-  type: '',
+  conditionType: '',
 };
 
 export default Vue.extend({
@@ -162,12 +162,12 @@ export default Vue.extend({
 
   methods: {
     async onSubmit() {
-      if (this.state.form.type === '') return;
+      if (this.state.form.conditionType === '') return;
 
       await this.$store.dispatch('resource/condition/create', {
         intercept: this.intercept.id,
-        rule: this.state.form.rule[this.state.form.type],
-        type: this.state.form.type,
+        rule: this.state.form.rule[this.state.form.conditionType],
+        conditionType: this.state.form.conditionType,
       });
 
       if (!this.$store.getters['resource/condition/failed']) {

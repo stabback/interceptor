@@ -16,7 +16,7 @@
 
 <script lang="ts">
 import Vue, { PropType } from 'vue';
-import { Intercept } from '@server/resources/intercept';
+import { Intercept } from '@client/store/resource/intercept';
 
 export default Vue.extend({
   name: 'ModalLockIntercept',

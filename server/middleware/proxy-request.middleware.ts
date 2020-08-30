@@ -1,11 +1,14 @@
 import { NextFunction, Request as ExpressRequest, Response as ExpressResponse } from 'express';
 import createProxyMiddleware from 'http-proxy-middleware';
 
-import { Domain, DomainService } from '@server/resources/domain';
+import { DomainService } from '@server/resources/domain';
 
-export default function (req: ExpressRequest, res: ExpressResponse, next: NextFunction) {
+export default async function (req: ExpressRequest, res: ExpressResponse, next: NextFunction) {
   // Must be validated by middleware
-  const domain = DomainService.getByKey(req.params.domain) as Domain;
+  const domain = await DomainService.getByIdentifier(req.params.domain);
+  if (!domain) {
+    return res.status(404).send();
+  }
 
   return createProxyMiddleware({
     changeOrigin: true,
@@ -22,7 +25,7 @@ export default function (req: ExpressRequest, res: ExpressResponse, next: NextFu
         proxyReq.write(bodyString);
       }
     },
-    target: domain.data.url,
+    target: domain.url,
 
   })(req, res, next);
 }

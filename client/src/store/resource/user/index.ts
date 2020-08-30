@@ -1,11 +1,12 @@
 import { generateModule } from '@client/utils/store/generate-module';
-import { Resource, ResourceName, PatchOperation } from '@definitions';
-import { UserData } from '@server/resources/user';
+
 import { Module } from 'vuex';
 import { ResourceState, RootState } from '@client/utils/store/resource-module';
+import { SerializedUser } from '@server/resources/user';
+import { ReplaceOperation, RemoveOperation } from 'fast-json-patch';
 
-export type User = Resource< ResourceName.user, UserData >;
-export type UserState = ResourceState< User >;
+export type User = SerializedUser;
+export type UserState = ResourceState<User>;
 
 const baseModule = generateModule< User >('user');
 
@@ -18,16 +19,21 @@ export const userModule: Module< UserState, RootState > = {
             intercept: string;
             response: string;
             user: string;
-        }) {
-      const operation: PatchOperation = {
-        path: `/data/intercepts/${payload.intercept}`,
-        op: 'replace',
-      };
+    }) {
+      const path = `/intercepts/${payload.intercept}`;
+      let operation: ReplaceOperation<string> | RemoveOperation;
 
       if (payload.response !== 'USE_DEFAULT') {
-        operation.value = payload.response;
+        operation = {
+          path,
+          value: payload.response,
+          op: 'replace',
+        };
       } else {
-        operation.op = 'remove';
+        operation = {
+          op: 'remove',
+          path,
+        };
       }
 
       return dispatch('update', {

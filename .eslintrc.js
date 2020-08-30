@@ -27,7 +27,10 @@ module.exports = {
     // Used to hide behind getters/setters
     'no-underscore-dangle': 'off',
 
-    'import/order': ['error']
+    'import/order': ['error'],
+
+    // Personal preference
+    'no-multiple-empty-lines': ["error", { "max": 3, "maxEOF": 0 }]
   },
   settings: {
     'import/resolver': {

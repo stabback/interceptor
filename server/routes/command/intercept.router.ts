@@ -6,18 +6,14 @@ import conditionController from '@server/controllers/condition/condition.control
 import interceptController from '@server/controllers/intercept/intercept.controller';
 import responseController from '@server/controllers/response/response.controller';
 
-import {
-  validateDomain, validateIntercept,
-} from '@server/middleware';
-
 const interceptRouter = Router();
 
 interceptRouter.get('/', interceptController.getMany);
-interceptRouter.post('/', validateDomain, interceptController.create);
-interceptRouter.get('/:intercept', validateIntercept, interceptController.get);
-interceptRouter.delete('/:intercept', validateIntercept, interceptController.remove);
-interceptRouter.patch('/:intercept', validateIntercept, interceptController.update);
-interceptRouter.get('/:intercept/condition', validateIntercept, conditionController.getMany);
-interceptRouter.get('/:intercept/response', validateIntercept, responseController.getMany);
+interceptRouter.post('/', interceptController.create);
+interceptRouter.get('/:intercept', interceptController.get);
+interceptRouter.delete('/:intercept', interceptController.remove);
+interceptRouter.patch('/:intercept', interceptController.update);
+interceptRouter.get('/:intercept/condition', conditionController.getMany);
+interceptRouter.get('/:intercept/response', responseController.getMany);
 
 export default interceptRouter;

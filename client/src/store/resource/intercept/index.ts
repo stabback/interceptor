@@ -1,13 +1,13 @@
 import { generateModule } from '@client/utils/store/generate-module';
-import { Resource, ResourceName } from '@definitions';
-import { InterceptData } from '@server/resources/intercept';
+
+import { SerializedIntercept } from '@server/resources/intercept';
 import { Module } from 'vuex';
 import { ResourceState, RootState } from '@client/utils/store/resource-module';
 
-export type Intercept = Resource< ResourceName.intercept, InterceptData >;
+export type Intercept = SerializedIntercept;
 export type InterceptState = ResourceState< Intercept >;
 
-const baseModule = generateModule< Intercept >('intercept');
+const baseModule = generateModule<Intercept>('intercept');
 
 export const interceptModule: Module< InterceptState, RootState > = {
   ...baseModule,

@@ -1,25 +1,41 @@
-import { BaseModel } from '@server/resources/base';
-import { Intercept, InterceptService } from '@server/resources/intercept';
+import {
+  createSchema, Type, typedModel, ExtractDoc, ExtractProps,
+} from 'ts-mongoose';
+import { serializeDocument } from '@server/utils';
+import { SerializedDocument } from '@definitions';
 
-export interface UserData {
-    key: string;
-    intercepts: {
-        [key: string]: string;
-    };
+export const UserSchema = createSchema({
+  intercepts: Type.mixed({ required: true, default: {} }),
+  // { [key Intercept.id]: Response.id | null }
+  key: Type.string({ required: true, unique: true }),
+}, {
+  minimize: false,
+});
+
+interface SerializedUserData {
+  intercepts: {
+    [key: string]: string;
+  };
+  key: UserProps['key'];
 }
 
-export class User extends BaseModel< UserData > {
-  constructor(
-        public data: UserData,
-        id?: string,
-  ) {
-    super(data, 'user', id);
-  }
+UserSchema.methods.toJSON = function toJSON(
+  this: UserDocument,
+) {
+  const data: SerializedUserData = {
+    key: this.key,
+    intercepts: this.intercepts,
+  };
 
-  public get Intercepts(): Intercept[] {
-    return Object.keys(this.data.intercepts)
-      .map((id) => InterceptService.get(id))
-      .filter((intercept) => intercept !== undefined)
-      .map((intercept) => intercept as Intercept);
-  }
+  return serializeDocument(this, data);
+};
+
+export const User = typedModel('User', UserSchema);
+export type UserDocument = ExtractDoc<typeof UserSchema>
+export type UserProps = ExtractProps<typeof UserSchema>
+export type SerializedUser = SerializedDocument<SerializedUserData>
+
+export interface UserInterceptSetting {
+  intercept: string;
+  response: string;
 }

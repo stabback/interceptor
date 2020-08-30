@@ -1,5 +1,5 @@
 import Vue from 'vue';
-import { Domain } from '@server/resources/domain';
+import { Domain } from '@client/store/resource/domain';
 
 export default Vue.extend({
   name: 'DomainMixin',

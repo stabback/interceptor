@@ -28,11 +28,6 @@ export default new Router({
       path: '/admin',
     },
     {
-      component: () => import(/* webpackChunkName: "snapshot" */ './views/Snapshot.vue'),
-      name: 'snapshot',
-      path: '/snapshot',
-    },
-    {
       beforeEnter: verifyUser,
       component: () => import(/* webpackChunkName: "user" */ './views/User.vue'),
       name: 'user',

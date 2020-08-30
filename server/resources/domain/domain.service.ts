@@ -1,16 +1,16 @@
-import { BaseService } from '@server/resources/base';
-import { Domain } from './domain.model';
+import { Types } from 'mongoose';
+import { Domain, DomainDocument } from './domain.model';
 
-export class DomainServiceClass extends BaseService< Domain > {
-  constructor() {
-    super(
-      'service',
-      Domain,
-    );
-  }
+export class DomainService {
+  public static async create(
+    name: string,
+    url: string,
+    key: string,
+  ): Promise<DomainDocument> {
+    // Verify that the domain key is unique
+    const existingDomain = await Domain.findOne({ key });
 
-  public create(name: string, url: string, key: string): Domain {
-    if (this.items.some((s) => s.data.key === key)) {
+    if (existingDomain) {
       throw new Error(`Attempting to create a domain with a key that already exists - ${key} - ${name}`);
     }
 
@@ -21,19 +21,29 @@ export class DomainServiceClass extends BaseService< Domain > {
       url,
     });
 
-    this.items = [
-      ...this.items,
-      domain,
-    ];
+    await domain.save();
 
     return domain;
   }
 
-  public getByKey(key: string): Domain | undefined {
-    return this.getByDataKey('key', key);
+  public static async getByIdentifier(identifier: string): Promise<DomainDocument | null> {
+    if (Types.ObjectId.isValid(identifier)) {
+      return Domain.findById(identifier);
+    }
+    return Domain.findOne({ key: identifier });
+  }
+
+  public static async removeByIdentifier(identifier: string): Promise<void> {
+    const domain = await DomainService.getByIdentifier(identifier);
+
+    if (!domain) return;
+
+    await domain.deleteOne();
+  }
+
+  public static async getAll(): Promise<DomainDocument[]> {
+    return Domain.find();
   }
 }
 
-const DOMAIN = new DomainServiceClass();
-
-export default DOMAIN;
+export default DomainService;

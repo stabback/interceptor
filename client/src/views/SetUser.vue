@@ -63,7 +63,7 @@ import Loader from '@client/components/Loader.vue';
 import CreateUserModal from '@client/components/modal/CreateUser.vue';
 import MainLayout from '@client/layouts/Main.vue';
 import Vue from 'vue';
-import { User } from '@server/resources/user';
+import { User } from '@client/store/resource/user';
 
 export default Vue.extend({
   name: 'SetUser',

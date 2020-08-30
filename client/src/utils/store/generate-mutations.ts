@@ -1,11 +1,11 @@
 // Allow param reassign in mutations
 /* eslint-disable no-param-reassign */
 
-import { BaseResource } from '@definitions';
+import { SerializedDocument } from '@definitions';
 import Vue from 'vue';
 import { ResourceMutations } from './resource-module';
 
-export function generateMutations< Resource extends BaseResource >():
+export function generateMutations<Resource extends SerializedDocument<Resource>>():
   ResourceMutations<Resource> {
   return {
     remove(s, id: string) {

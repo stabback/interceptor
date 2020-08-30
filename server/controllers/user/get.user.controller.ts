@@ -1,11 +1,15 @@
 import { Request as ExpressRequest, Response as ExpressResponse } from 'express';
 
-import { User, UserService } from '@server/resources/user';
+import { UserService } from '@server/resources/user';
 
-export default function get(req: ExpressRequest, res: ExpressResponse) {
-  const user = (
-        UserService.getByKey(req.params.user) || UserService.get(req.params.user)
-    ) as User;
+export default async function get(req: ExpressRequest, res: ExpressResponse) {
+  const identifier = req.params.user;
 
-  return res.send(user.asResponse);
+  const user = await UserService.getByIdentifier(identifier);
+
+  if (!user) {
+    return res.status(404).send();
+  }
+
+  return res.send(user);
 }

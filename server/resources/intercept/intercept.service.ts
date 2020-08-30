@@ -1,29 +1,44 @@
-import { BaseService } from '@server/resources/base';
+import { Types } from 'mongoose';
+import { Intercept, InterceptDocument } from './intercept.model';
 
-import { Intercept } from './intercept.model';
-
-export class InterceptServiceClass extends BaseService< Intercept > {
-  constructor() {
-    super(
-      'intercept',
-      Intercept,
-    );
-  }
-
-  public create(name: string, conditions: string[] = [], responses: string[] = []): Intercept {
+export class InterceptService {
+  public static async create(
+    name: string,
+    conditions: string[] = [],
+    responses: string[] = [],
+    save = true,
+  ): Promise<InterceptDocument> {
     const intercept = new Intercept({
-      conditions, defaultResponse: null, locked: false, name, responses,
+      conditions,
+      defaultResponse: null,
+      locked: false,
+      name,
+      responses,
     });
 
-    this.items = [
-      ...this.items,
-      intercept,
-    ];
+    if (save) {
+      await intercept.save();
+    }
 
     return intercept;
   }
+
+  public static async getAll(): Promise<InterceptDocument[]> {
+    return Intercept.find();
+  }
+
+  public static async get(id: Types.ObjectId | string): Promise<InterceptDocument | null> {
+    if (Types.ObjectId.isValid(id)) {
+      return Intercept.findById(id);
+    }
+    return null;
+  }
+
+  public static async remove(id: Types.ObjectId | string): Promise<void> {
+    if (Types.ObjectId.isValid(id)) {
+      await Intercept.findByIdAndDelete(id);
+    }
+  }
 }
 
-const interceptService = new InterceptServiceClass();
-
-export default interceptService;
+export default InterceptService;

@@ -1,5 +1,14 @@
+import dotenv from 'dotenv';
+import path from 'path';
+
+dotenv.config({
+  path: path.resolve(__dirname, '..', '..', '.env'),
+});
+
+/* eslint-disable no-console,import/first */
 import app from '@server/app';
 import http from 'http';
+import { connect } from '@server/db';
 
 /**
  * Normalize a port into a number, string, or false.
@@ -34,7 +43,14 @@ const server = http.createServer(app);
 /**
  * Listen on provided port, on all network interfaces.
  */
-server.listen(port);
+// server.listen(port);
+connect().then(() => {
+  console.log('Database connected');
+  server.listen(port);
+}).catch((err) => {
+  console.error('Database error', err);
+  server.listen(port);
+});
 
 server.on('error', (error: NodeJS.ErrnoException) => {
   if (error.syscall !== 'listen') {

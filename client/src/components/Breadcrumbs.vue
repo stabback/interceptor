@@ -4,8 +4,8 @@
 
 <script lang="ts">
 import Vue from 'vue';
-import { Domain } from '@server/resources/domain';
-import { User } from '@server/resources/user';
+import { Domain } from '@client/store/resource/domain';
+import { User } from '@client/store/resource/user';
 
 interface Crumb {
     active?: boolean;

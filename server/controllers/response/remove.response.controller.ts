@@ -1,19 +1,11 @@
 import { Request as ExpressRequest, Response as ExpressResponse } from 'express';
 
-import { InterceptService } from '@server/resources/intercept';
-import { Response, ResponseService } from '@server/resources/response';
+import { ResponseService } from '@server/resources/response';
 
-export default function remove(req: ExpressRequest, res: ExpressResponse) {
-  // Validation must be performed as middleware
-  const response = ResponseService.get(req.params.response) as Response;
+export default async function remove(req: ExpressRequest, res: ExpressResponse) {
+  const id = req.params.response;
 
-  ResponseService.remove(response.id);
+  await ResponseService.remove(id);
 
-  InterceptService.items.forEach((intercept) => {
-    intercept.removeResponse(response.id);
-  });
-
-  InterceptService.save();
-
-  res.status(204).send();
+  return res.status(204).send();
 }

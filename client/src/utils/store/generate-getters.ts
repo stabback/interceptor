@@ -1,7 +1,8 @@
-import { BaseResource } from '@definitions';
+import { SerializedDocument } from '@definitions';
 import { ResourceGetters } from './resource-module';
 
-export function generateGetters<Resource extends BaseResource>(): ResourceGetters<Resource> {
+export function generateGetters
+  <Resource extends SerializedDocument>(): ResourceGetters<Resource> {
   return {
     errors: (s) => s.meta.errors,
     failed: (s) => s.meta.failed,

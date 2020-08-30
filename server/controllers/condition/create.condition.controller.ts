@@ -1,43 +1,49 @@
 import { Request as ExpressRequest, Response as ExpressResponse } from 'express';
 
-import { ConditionService, ConditionType } from '@server/resources/condition';
-import { ErrorService } from '@server/resources/error';
-import { Intercept, InterceptService } from '@server/resources/intercept';
+import { ConditionService } from '@server/resources/condition';
+import { ServerErrorService } from '@server/resources/server-error';
+import { InterceptService } from '@server/resources/intercept';
 import { validateRequiredParams } from '@server/utils';
 
-export default function create(req: ExpressRequest, res: ExpressResponse) {
-  const { type, rule, intercept: interceptId } = req.body;
+export default async function create(req: ExpressRequest, res: ExpressResponse) {
+  const {
+    conditionType,
+    rule,
+    intercept: interceptId,
+  } = req.body;
 
-  // Validation must be performed as middleware
-  const intercept = InterceptService.get(interceptId) as Intercept;
-
-  if (intercept.locked) {
-    return res.status(400).send(ErrorService.buildPayload([
-      ErrorService.create(
-        'CREATE_CONDITION_INTERCEPT_LOCKED',
-        'The intercept you are attempting to modify is locked and cannot have its conditions modified',
-      ),
-    ]));
-  }
-
-  const errors = validateRequiredParams({ type, rule }, 'CREATE_CONDITION_VALIDATION_ERROR', res);
+  const errors = await validateRequiredParams({ conditionType, rule }, 'CREATE_CONDITION_VALIDATION_ERROR', res);
   if (errors.length > 0) { return res; }
 
-  if (!Object.values(ConditionType).includes(type)) {
-    errors.push(
-      ErrorService.create(
-        'CREATE_CONDITION_UNKOWN_TYPE',
-        `The supplied type is not a valid type - ${type}`,
+  const condition = await ConditionService.create(
+    conditionType,
+    rule,
+  );
+
+  const intercept = await InterceptService.get(interceptId);
+
+  if (!intercept) {
+    return res.status(400).send(
+      await ServerErrorService.create(
+        'CREATE_CONDITION_INTERCEPT_NOT_FOUND',
+        'The intercept you are attempting to add a condition to was not found',
       ),
     );
-    return res.status(400).send(ErrorService.buildPayload(errors));
   }
 
-  const condition = ConditionService.create(type, rule);
+  try {
+    await intercept.addCondition(condition);
+  } catch (e) {
+    return res.status(400).send(
+      await ServerErrorService.create(
+        'CREATE_CONDITION_COULD_NOT_ADD_TO_INTERCEPT',
+        e,
+      ),
+    );
+  }
 
-  intercept.addCondition(condition.id);
+  condition.save();
+  intercept.save();
 
-  InterceptService.save();
-
-  return res.status(201).send(condition.asResponse);
+  return res.status(201).send(condition);
 }

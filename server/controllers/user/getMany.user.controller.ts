@@ -2,8 +2,8 @@ import { Request as ExpressRequest, Response as ExpressResponse } from 'express'
 
 import { UserService } from '@server/resources/user';
 
-export default function getMany(req: ExpressRequest, res: ExpressResponse) {
-  const users = UserService.items;
+export default async function getMany(req: ExpressRequest, res: ExpressResponse) {
+  const users = await UserService.getAll();
 
-  return res.send(UserService.buildPayload(users));
+  return res.send({ items: users });
 }

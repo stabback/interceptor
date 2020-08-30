@@ -1,19 +1,11 @@
 import { Request as ExpressRequest, Response as ExpressResponse } from 'express';
 
-import { Condition, ConditionService } from '@server/resources/condition';
-import { InterceptService } from '@server/resources/intercept';
+import { ConditionService } from '@server/resources/condition';
 
-export default function remove(req: ExpressRequest, res: ExpressResponse) {
-  // Validation must be performed as middleware
-  const condition = ConditionService.get(req.params.condition) as Condition;
+export default async function remove(req: ExpressRequest, res: ExpressResponse) {
+  const id = req.params.condition;
 
-  ConditionService.remove(condition.id);
+  await ConditionService.remove(id);
 
-  InterceptService.items.forEach((intercept) => {
-    intercept.removeCondition(condition.id);
-  });
-
-  InterceptService.save();
-
-  res.status(204).send();
+  return res.status(204).send();
 }

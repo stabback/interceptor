@@ -1,51 +1,58 @@
 import { Request as ExpressRequest, Response as ExpressResponse } from 'express';
-import { applyPatch, Operation } from 'fast-json-patch';
 
-import { ErrorService } from '@server/resources/error';
-import { Intercept, InterceptService } from '@server/resources/intercept';
+import { ServerErrorService } from '@server/resources/server-error';
+import { InterceptService } from '@server/resources/intercept';
+import { Operation } from 'fast-json-patch';
+import applyPatchOperations from '@server/utils/apply-patch-operations/apply-patch-operations';
 
-export default function update(req: ExpressRequest, res: ExpressResponse) {
-  const intercept = InterceptService.get(req.params.intercept)as Intercept;
-
-  const body = req.body as Operation;
-
-  if (!Array.isArray(body)) {
+export default async function update(req: ExpressRequest, res: ExpressResponse) {
+  const id = req.params.intercept;
+  let intercept;
+  try {
+    intercept = await InterceptService.get(id);
+  } catch (e) {
     return res.status(400).send(
-      ErrorService.buildPayload([
-        ErrorService.create(
-          'UPDATE_INTERCEPT_BAD_FORMAT',
-          'Body is not an array of patch operations',
-        ),
-      ]),
+      await ServerErrorService.create(
+        'UPDATE_INTERCEPT_BAD_INTERCEPT_ID',
+        'The Id for this intercept does is not valid',
+      ),
     );
   }
 
-  if (body.some((operation) => operation.path !== '/data/locked')) {
+  if (!intercept) {
+    return res.status(404).send();
+  }
+
+  if (!req.body.updates || !Array.isArray(req.body.updates)) {
     return res.status(400).send(
-      ErrorService.buildPayload([
-        ErrorService.create(
-          'UPDATE_INTERCEPT_INVALID_OPERATION',
-          'Intercepts may only have their lock status changed',
-        ),
-      ]),
+      await ServerErrorService.create(
+        'UPDATE_INTERCEPT_BAD_FORMAT',
+        'Body must contain an array of patch operations',
+      ),
+    );
+  }
+
+  if (req.body.updates.some((operation: Operation) => operation.path !== '/locked')) {
+    return res.status(400).send(
+      await ServerErrorService.create(
+        'UPDATE_INTERCEPT_INVALID_OPERATION',
+        'Intercepts may only have their lock status changed',
+      ),
     );
   }
 
   try {
-    applyPatch(intercept, body);
+    await applyPatchOperations(intercept, req.body.updates);
   } catch (e) {
     console.error(e);
     return res.status(400).send(
-      ErrorService.buildPayload([
-        ErrorService.create(
-          'UPDATE_INTERCEPT_UNKOWN_ERROR',
-          `Could not apply operation - ${e}`,
-        ),
-      ]),
+      ServerErrorService.create(
+        'UPDATE_INTERCEPT_UNKOWN_ERROR',
+        `Could not apply update - ${e}`,
+      ),
     );
   }
 
-  InterceptService.save();
-
-  return res.status(200).send(intercept.asResponse);
+  const updatedIntercept = await InterceptService.get(intercept.id);
+  return res.send(updatedIntercept);
 }
