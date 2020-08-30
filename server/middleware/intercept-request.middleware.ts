@@ -1,24 +1,45 @@
 import { NextFunction, Request as ExpressRequest, Response as ExpressResponse } from 'express';
 
-import { ErrorService } from '@server/resources/error';
-
-import { Domain, DomainService } from '@server/resources/domain';
-import { InterceptService } from '@server/resources/intercept';
+import {
+  DomainService,
+} from '@server/resources/domain';
+import { InterceptDocument } from '@server/resources/intercept';
 import { ResponseService } from '@server/resources/response';
-import { User, UserService } from '@server/resources/user';
+import { UserService } from '@server/resources/user';
+import { Types } from 'mongoose';
 
-export default function (req: ExpressRequest, res: ExpressResponse, next: NextFunction) {
-  // Validation must be done in prior middlewares
-  const user = UserService.getByKey(req.params.user) as User;
-  const domain = DomainService.getByKey(req.params.domain) as Domain;
-  const intercept = domain.data.intercepts.map(
-    (id) => InterceptService.get(id),
-  ).find(
-    (m) => m && m.test(req),
-  );
-
-  res.setHeader('X-Interceptor-Domain', domain.id);
+export default async function (req: ExpressRequest, res: ExpressResponse, next: NextFunction) {
+  // Get the user
+  const user = await UserService.getByIdentifier(req.params.user);
+  if (!user) {
+    return res.status(404).send();
+  }
   res.setHeader('X-Interceptor-User', user.id);
+
+
+  // Get the domain
+  const domain = await DomainService.getByIdentifier(req.params.domain);
+  if (!domain) {
+    return res.status(404).send();
+  }
+  res.setHeader('X-Interceptor-Domain', domain.id);
+
+
+  // Find the first intercept that matches this request
+  domain.populate('intercepts');
+  await domain.execPopulate();
+
+  const intercepts = domain.intercepts as InterceptDocument[];
+
+  const intercept = intercepts.find(
+    async (thisIntercept) => {
+      if (thisIntercept) {
+        const result = await thisIntercept.test(req);
+        return result;
+      }
+      return false;
+    },
+  );
 
   if (!intercept) {
     return next();
@@ -26,31 +47,34 @@ export default function (req: ExpressRequest, res: ExpressResponse, next: NextFu
 
   res.setHeader('X-Interceptor-Intercept', intercept.id);
 
-  let responseId = '';
-  if (user.data.intercepts[intercept.id]) {
-    responseId = user.data.intercepts[intercept.id];
-    res.setHeader('X-Interceptor-Response-Source', 'user');
-  } else if (intercept.data.defaultResponse) {
-    responseId = intercept.data.defaultResponse;
-    res.setHeader('X-Interceptor-Response-Source', 'intercept-default');
+
+  // Select the response to return
+  let response;
+
+  // Check if the user has selected a response already
+  const userSetting = user.intercepts ? user.intercepts[intercept.id] : null;
+
+  if (userSetting) {
+    response = await ResponseService.get(userSetting as Types.ObjectId);
+    if (response) {
+      res.setHeader('X-Interceptor-Response-Source', 'user');
+    }
   }
 
-  if (responseId === '') {
+  // If not, check if there is a default response
+  if (!response && intercept.defaultResponse) {
+    response = await ResponseService.get(intercept.defaultResponse as Types.ObjectId);
+    if (response) {
+      res.setHeader('X-Interceptor-Response-Source', 'intercept-default');
+    }
+  }
+
+  // If not, pass the response through
+  if (!response) {
     return next();
   }
 
-  res.setHeader('X-Interceptor-Response', responseId);
-  const response = ResponseService.get(responseId);
+  res.setHeader('X-Interceptor-Response', response.id);
 
-  if (!response) {
-    return res.status(500).send(ErrorService.buildPayload([
-      ErrorService.create(
-        'CALL_MATCHED_INTERCEPT_MISSING_RESPONSE',
-        `Request matched intercept ${intercept.id} and
-                ${responseId} was to be returned, but could not be found.`,
-      ),
-    ]));
-  }
-  const r = response.send(res);
-  return r;
+  return response.send(res);
 }

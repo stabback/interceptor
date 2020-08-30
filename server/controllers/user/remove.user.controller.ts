@@ -1,12 +1,11 @@
 import { Request as ExpressRequest, Response as ExpressResponse } from 'express';
 
-import { User, UserService } from '@server/resources/user';
+import { UserService } from '@server/resources/user';
 
-export default function remove(req: ExpressRequest, res: ExpressResponse) {
-  // Validation must be performed as middleware
-  const user = UserService.get(req.params.user) as User;
+export default async function remove(req: ExpressRequest, res: ExpressResponse) {
+  const identifier = req.params.user;
 
-  UserService.remove(user.id);
+  await UserService.removeByIdentifier(identifier);
 
-  res.status(204).send();
+  return res.status(204).send();
 }

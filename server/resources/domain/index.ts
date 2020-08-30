@@ -1,2 +1,2 @@
 export * from './domain.model';
-export { default as DomainService } from './domain.service';
+export * from './domain.service';

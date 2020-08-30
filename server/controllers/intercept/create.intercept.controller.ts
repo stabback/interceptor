@@ -1,47 +1,47 @@
 import { Request as ExpressRequest, Response as ExpressResponse } from 'express';
 
-import { Domain, DomainService } from '@server/resources/domain';
-import { ErrorService } from '@server/resources/error';
+import { DomainService } from '@server/resources/domain';
+import { ServerErrorService } from '@server/resources/server-error';
 import { InterceptService } from '@server/resources/intercept';
 import { validateRequiredParams } from '@server/utils';
 
-export default function create(req: ExpressRequest, res: ExpressResponse) {
-  const { name, domain: domainId } = req.body;
+export default async function create(req: ExpressRequest, res: ExpressResponse) {
+  const {
+    name,
+    conditions,
+    responses,
+    domain: domainId,
+  } = req.body;
 
-  const domain = DomainService.get(domainId) as Domain;
-
-  if (!domain) {
-    return res.status(400).send(ErrorService.buildPayload([
-      ErrorService.create(
-        'CREATE_INTERCEPT_INCORRECT_DOMAIN',
-        'The supplied domain is not an ID',
-      ),
-    ]));
-  }
-
-  const conditions = req.body.conditions || [];
-  const responses = req.body.responses || [];
-
-  const errors = validateRequiredParams({ name }, 'CREATE_INTERCEPT_VALIDATION_ERROR', res);
+  const errors = await validateRequiredParams({ name }, 'CREATE_DOMAIN_VALIDATION_ERROR', res);
   if (errors.length > 0) { return res; }
 
-  const nameExists = domain.data.intercepts.some((i) => {
-    const I = InterceptService.get(i);
-    return (I && I.data.name === name);
-  });
+  const intercept = await InterceptService.create(name, conditions, responses, false);
 
-  if (nameExists) {
-    return res.status(400).send(ErrorService.buildPayload([
-      ErrorService.create(
-        'CREATE_INTERCEPT_DUPLICATE_NAME',
-        'Intercept names must be unique per domain',
+  const domain = await DomainService.getByIdentifier(domainId);
+
+  if (!domain) {
+    return res.status(400).send(
+      await ServerErrorService.create(
+        'CREATE_INTERCEPT_DOMAIN_NOT_FOUND',
+        'The domain you are attempting to add an intercept to was not found',
       ),
-    ]));
+    );
   }
 
-  const intercept = InterceptService.create(name, conditions, responses);
-  domain.addIntercept(intercept.id);
-  DomainService.save();
+  try {
+    await domain.addIntercept(intercept);
+  } catch (e) {
+    return res.status(400).send(
+      await ServerErrorService.create(
+        'CREATE_INTERCEPT_COULD_NOT_ADD_TO_DOMAIN',
+        e,
+      ),
+    );
+  }
 
-  return res.status(201).send(intercept.asResponse);
+  await intercept.save();
+  await domain.save();
+
+  return res.status(201).send(intercept);
 }

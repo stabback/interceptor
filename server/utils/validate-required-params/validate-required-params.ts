@@ -1,14 +1,14 @@
-import { ApiError, ErrorService } from '@server/resources/error';
+import { ServerErrorService, ServerErrorDocument } from '@server/resources/server-error';
 import { Response as ExpressResponse } from 'express';
 
-export default (params: {}, errorCode = 'GENERAL_VALIDATION_ERROR', res?: ExpressResponse): ApiError[] => {
-  const errors = Object.entries(params)
+export default async (params: {}, errorCode = 'GENERAL_VALIDATION_ERROR', res?: ExpressResponse): Promise<ServerErrorDocument[]> => {
+  const errors = await Promise.all(Object.entries(params)
     .filter(([, value]) => value === undefined || value === '')
-    .map(([key]) => ErrorService.create(errorCode, `The param ${key} must be provided`));
+    .map(([key]) => ServerErrorService.create(errorCode, `The param ${key} must be provided`)));
 
   if (res && errors.length > 0) {
     res.status(400);
-    res.send(ErrorService.buildPayload(errors));
+    res.send(errors);
   }
 
   return errors;

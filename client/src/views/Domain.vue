@@ -156,9 +156,9 @@ import ResponseDetails from '@client/components/page/domain/table/ResponseDetail
 import SelectResponseCell from '@client/components/page/domain/table/SelectResponseCell.vue';
 
 import MainLayout from '@client/layouts/Main.vue';
-import { Intercept } from '@server/resources/intercept';
-import { Condition } from '@server/resources/condition';
-import { Response } from '@server/resources/response';
+import { Intercept } from '@client/store/resource/intercept';
+import { Condition } from '@client/store/resource/condition';
+import { Response } from '@client/store/resource/response';
 import { DomainMixin, UserMixin } from '@client/mixins';
 
 import mixins from 'vue-typed-mixins';
@@ -245,7 +245,7 @@ export default mixins(UserMixin, DomainMixin).extend({
     hydratedIntercepts(): HydratedIntercept[] {
       if (!this.state.initialized) { return []; }
 
-      return this.domain.data.intercepts.map((id) => {
+      return this.domain.data.intercepts.map((id: string) => {
         const intercept = this.$store.getters['resource/intercept/item'](id);
 
         if (!intercept) {
@@ -265,23 +265,30 @@ export default mixins(UserMixin, DomainMixin).extend({
     interceptTableData(): InterceptRow[] {
       const res = this.hydratedIntercepts
 
-        .map((intercept: HydratedIntercept): InterceptRow => ({
-          _showDetails: this.state.toggledRow === intercept.id,
-          conditions: intercept.conditions,
-          id: intercept.id,
-          locked: !!intercept.data.locked,
-          name: intercept.data.name,
-          options: intercept.responses.map((response) => ({
+        .map((intercept: HydratedIntercept): InterceptRow => {
+          const options = intercept.responses.map((response) => ({
             text: response.data.name,
             value: response.id,
-          })),
-          responses: intercept.responses.map((r: Response) => ({
+          }));
+
+          const responses = intercept.responses.map((r: Response) => ({
             ...r,
             isActive: this.user.data.intercepts[intercept.id] === r.id,
-          })),
-          totalConditions: intercept.conditions.length,
-          totalResponses: intercept.responses.length,
-        }));
+          }));
+
+
+          return {
+            _showDetails: this.state.toggledRow === intercept.id,
+            conditions: intercept.conditions,
+            id: intercept.id,
+            locked: Boolean(intercept.data.locked),
+            name: intercept.data.name,
+            options,
+            responses,
+            totalConditions: intercept.conditions.length,
+            totalResponses: intercept.responses.length,
+          };
+        });
 
       return res;
     },

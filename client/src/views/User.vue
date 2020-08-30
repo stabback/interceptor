@@ -82,8 +82,8 @@ import ConfigureDomainModal from '@client/components/modal/ConfigureDomain.vue';
 
 import MainLayout from '@client/layouts/Main.vue';
 import Vue from 'vue';
-import { User } from '@server/resources/user';
-import { Domain } from '@server/resources/domain';
+import { User } from '@client/store/resource/user';
+import { Domain } from '@client/store/resource/domain';
 
 export default Vue.extend({
   name: 'User',

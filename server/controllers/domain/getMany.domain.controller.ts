@@ -2,8 +2,8 @@ import { Request as ExpressRequest, Response as ExpressResponse } from 'express'
 
 import { DomainService } from '@server/resources/domain';
 
-export default function getMany(req: ExpressRequest, res: ExpressResponse) {
-  const domains = DomainService.items;
+export default async function getMany(req: ExpressRequest, res: ExpressResponse) {
+  const domains = await DomainService.getAll();
 
-  return res.send(DomainService.buildPayload(domains));
+  return res.send({ items: domains });
 }

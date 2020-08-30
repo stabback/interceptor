@@ -90,8 +90,8 @@ import Vue from 'vue';
 
 import ConfigureIntercept from '@client/components/modal/ConfigureIntercept.vue';
 import DeleteInterceptModal from '@client/components/modal/DeleteIntercept.vue';
-import { Domain } from '@server/resources/domain';
-import { Intercept } from '@server/resources/intercept';
+import { Domain } from '@client/store/resource/domain';
+import { Intercept } from '@client/store/resource/intercept';
 import { BvModalEvent, BvTableFieldArray } from 'bootstrap-vue';
 
 interface DomainOption {
@@ -197,8 +197,6 @@ export default Vue.extend({
 
       if (this.subject) {
         this.$bvModal.show('delete-intercept');
-      } else {
-        console.error('Attempting to delete a intercept that does not exist');
       }
     },
 

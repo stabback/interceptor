@@ -20,7 +20,7 @@
 
 <script lang="ts">
 import Vue, { PropType } from 'vue';
-import { Domain } from '@server/resources/domain';
+import { Domain } from '@client/store/resource/domain';
 
 export default Vue.extend({
   name: 'ModalDeleteDomain',

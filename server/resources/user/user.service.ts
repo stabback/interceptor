@@ -1,38 +1,56 @@
-import { BaseService } from '@server/resources/base';
+import { Types } from 'mongoose';
+import {
+  User, UserDocument,
+} from './user.model';
 
-import { User } from './user.model';
+export class UserService {
+  public static async create(
+    key: string,
+    intercepts: {
+      [key: string]: string;
+    } = {},
+  ): Promise<UserDocument> {
+    const existingUser = await User.findOne({ key });
 
-export class UserServiceClass extends BaseService< User > {
-  constructor() {
-    super(
-      'user',
-      User,
-    );
-  }
-
-  public create(key: string): User {
-    if (this.items.some((u) => u.data.key === key)) {
-      throw new Error(`Attempting to create a user with a key that already exists - ${key}`);
+    if (existingUser) {
+      throw new Error(`Attempting to create a user with a key that already exists - ${key} - ${key}`);
     }
 
-    const user = new User({
+    const user = await User.create({
+      intercepts,
       key,
-      intercepts: {},
     });
 
-    this.items = [
-      ...this.items,
-      user,
-    ];
+    await user.save();
 
     return user;
   }
 
-  public getByKey(key: string) {
-    return this.getByDataKey('key', key);
+  public static async get(id: Types.ObjectId | string): Promise<UserDocument | null> {
+    if (Types.ObjectId.isValid(id)) {
+      return User.findById(id);
+    }
+    return null;
+  }
+
+  public static async getByIdentifier(identifier: string): Promise<UserDocument | null> {
+    if (Types.ObjectId.isValid(identifier)) {
+      return User.findById(identifier);
+    }
+    return User.findOne({ key: identifier });
+  }
+
+  public static async removeByIdentifier(identifier: string): Promise<void> {
+    const user = await UserService.getByIdentifier(identifier);
+
+    if (!user) return;
+
+    await user.deleteOne();
+  }
+
+  public static async getAll(): Promise<UserDocument[]> {
+    return User.find();
   }
 }
 
-const userService = new UserServiceClass();
-
-export default userService;
+export default UserService;

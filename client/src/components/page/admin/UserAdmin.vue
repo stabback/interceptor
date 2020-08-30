@@ -46,7 +46,7 @@ import Vue from 'vue';
 import CreateUserModal from '@client/components/modal/CreateUser.vue';
 import DeleteUserModal from '@client/components/modal/DeleteUser.vue';
 
-import { User } from '@server/resources/user';
+import { User } from '@client/store/resource/user';
 import { BvTableFieldArray } from 'bootstrap-vue';
 
 interface UserItem {
@@ -103,8 +103,6 @@ export default Vue.extend({
 
       if (this.subject) {
         this.$bvModal.show('delete-user');
-      } else {
-        console.error('Attempting to delete a user that does not exist');
       }
     },
   },

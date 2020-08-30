@@ -1,18 +1,35 @@
 import { Request as ExpressRequest, Response as ExpressResponse } from 'express';
 
-import { Domain, DomainService } from '@server/resources/domain';
+import { DomainService } from '@server/resources/domain';
 import { InterceptService } from '@server/resources/intercept';
+import { ServerErrorService } from '@server/resources/server-error';
 
-export default function getMany(req: ExpressRequest, res: ExpressResponse) {
-  let intercepts = InterceptService.items;
+export default async function getMany(req: ExpressRequest, res: ExpressResponse) {
+  let intercepts;
 
   if (req.params.domain) {
-    const domain = (
-            DomainService.get(req.params.domain) || DomainService.getByKey(req.params.domain)
-        ) as Domain;
+    let domain;
+    try {
+      domain = await DomainService.getByIdentifier(req.params.domain);
+    } catch (e) {
+      return res.status(400).send(
+        await ServerErrorService.create(
+          'GET_INTERCEPTS_BY_DOMAIN_BAD_ID',
+          'The id provided for the domain is not valid',
+        ),
+      );
+    }
 
-    intercepts = intercepts.filter((intercept) => domain.data.intercepts.includes(intercept.id));
+    if (!domain) {
+      return res.status(404).send();
+    }
+    domain.populate('intercepts');
+    await domain.execPopulate();
+
+    intercepts = domain.intercepts;
+  } else {
+    intercepts = await InterceptService.getAll();
   }
 
-  res.send(InterceptService.buildPayload(intercepts));
+  return res.send({ items: intercepts });
 }

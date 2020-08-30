@@ -1,39 +1,51 @@
 import { Request as ExpressRequest, Response as ExpressResponse } from 'express';
 
-import { ErrorService } from '@server/resources/error';
-import { Intercept, InterceptService } from '@server/resources/intercept';
+import { ServerErrorService } from '@server/resources/server-error';
+import { InterceptService } from '@server/resources/intercept';
 import { ResponseService } from '@server/resources/response';
 import { validateRequiredParams } from '@server/utils';
 
-export default function create(req: ExpressRequest, res: ExpressResponse) {
-  const { name, intercept: interceptId } = req.body;
+export default async function create(req: ExpressRequest, res: ExpressResponse) {
+  const {
+    name,
+    intercept: interceptId,
+    body,
+    headers,
+    status,
+    delay,
+  } = req.body;
 
-  // Validation must be performed as middleware
-  const intercept = InterceptService.get(interceptId) as Intercept;
+  const errors = await validateRequiredParams({ name }, 'CREATE_DOMAIN_VALIDATION_ERROR', res);
+  if (errors.length > 0) { return res; }
 
-  const errors = validateRequiredParams({ name }, 'CREATE_RESPONSE_VALIDATION_ERROR');
+  const response = await ResponseService.create(
+    name, body, headers, status, delay,
+  );
 
-  if (intercept.data.responses.map((id) => ResponseService.get(id)).some(
-    (r) => r && r.data.name === name,
-  )) {
-    errors.push(ErrorService.create(
-      'CREATE_RESPONSE_DUPLICATE_NAME',
-      'Response names must be unique.  This intercept already has a response by that name.',
-    ));
+  const intercept = await InterceptService.get(interceptId);
+
+  if (!intercept) {
+    return res.status(400).send(
+      await ServerErrorService.create(
+        'CREATE_RESPONSE_INTERCEPT_NOT_FOUND',
+        'The intercept you are attempting to add a response to was not found',
+      ),
+    );
   }
 
-  if (errors.length > 0) {
-    return res.status(400).send(ErrorService.buildPayload(errors));
+  try {
+    await intercept.addResponse(response);
+  } catch (e) {
+    return res.status(400).send(
+      await ServerErrorService.create(
+        'CREATE_RESPONSE_COULD_NOT_ADD_TO_INTERCEPT',
+        e,
+      ),
+    );
   }
 
-  const status = req.body.status || 200;
-  const headers = req.body.headers || {};
-  const { body } = req.body;
-  const delay = req.body.delay || 200;
+  await response.save();
+  await intercept.save();
 
-  const response = ResponseService.create(name, status, headers, body, delay);
-  intercept.addResponse(response.id);
-  InterceptService.save();
-
-  return res.status(201).send(response.asResponse);
+  return res.status(201).send(response);
 }

@@ -1,35 +1,48 @@
-import { BaseService } from '@server/resources/base';
+import { Types } from 'mongoose';
+import { Response, ResponseDocument } from './response.model';
 
-import { Headers, Response } from './response.model';
+export interface Header {
+  name: string;
+  value: string;
+}
 
-export class ResponseServiceClass extends BaseService< Response > {
-  constructor() {
-    super(
-      'response',
-      Response,
-    );
-  }
-
-  public create(
+export class ResponseService {
+  public static async create(
     name: string,
-    status: number,
-    headers: Headers,
-    body: string | {} | undefined,
-    delay: number,
-  ): Response {
-    const response = new Response({
-      name, status, headers, body, delay,
+    body: string | undefined,
+    headers: Header[] = [],
+    status = 200,
+    delay = 200,
+  ): Promise<ResponseDocument> {
+    const response = await Response.create({
+      name,
+      status,
+      delay,
+      headers,
+      body,
     });
 
-    this.items = [
-      ...this.items,
-      response,
-    ];
+    await response.save();
 
     return response;
   }
+
+  public static async getAll(): Promise<ResponseDocument[]> {
+    return Response.find();
+  }
+
+  public static async get(id: Types.ObjectId | string): Promise<ResponseDocument | null> {
+    if (Types.ObjectId.isValid(id)) {
+      return Response.findById(id);
+    }
+    return null;
+  }
+
+  public static async remove(id: Types.ObjectId | string): Promise<void> {
+    if (Types.ObjectId.isValid(id)) {
+      await Response.findByIdAndDelete(id);
+    }
+  }
 }
 
-const responseService = new ResponseServiceClass();
-
-export default responseService;
+export default ResponseService;

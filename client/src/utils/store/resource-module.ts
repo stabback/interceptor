@@ -1,7 +1,7 @@
 import {
   ActionTree, ActionContext, GetterTree, MutationTree, Module,
 } from 'vuex';
-import { PatchOperation } from '@definitions';
+import { SerializedDocument } from '@definitions';
 import { ResourceModuleState } from '@client/store/resource/ResourceModuleState';
 
 export interface RootState {
@@ -21,7 +21,9 @@ export interface ResourceActions<Resource> extends ActionTree<ResourceState<Reso
     remove: (ctx: ActionContext<ResourceState<Resource>, RootState>, id: string) => Promise<void>;
     update: (
       ctx: ActionContext<ResourceState<Resource>, RootState>,
-      payload: { identifier: string; operations: PatchOperation[] }
+    // TODO - type creation
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      payload: { identifier: string; operations: any[] }
     ) => Promise<void>;
 
     // TODO - type creation
@@ -29,13 +31,16 @@ export interface ResourceActions<Resource> extends ActionTree<ResourceState<Reso
     create: (ctx: ActionContext<ResourceState<Resource>, RootState>, item: any) => Promise<any>;
   }
 
-export interface ResourceGetters<Resource> extends GetterTree<ResourceState<Resource>, RootState>{
+export interface ResourceGetters
+  <Resource extends SerializedDocument<Resource>>
+  extends GetterTree<ResourceState<Resource>, RootState>{
+
     errors: (state: ResourceState<Resource>) => string[];
     failed: (state: ResourceState<Resource>) => boolean;
     fetching: (state: ResourceState<Resource>) => boolean;
     item: (state: ResourceState<Resource>) => (id: string) => Resource | undefined;
     itemByData: <D extends unknown> (state: ResourceState<Resource>) =>
-      (key: string, value: D) =>
+      (key: keyof Resource['data'], value: D) =>
         Resource | undefined;
     items: (state: ResourceState<Resource>) => Resource[];
 }
@@ -64,7 +69,9 @@ export interface ResourceState< Resource > {
     meta: ResourceMetaState;
 }
 
-export interface ResourceModule<Resource> extends Module<ResourceState<Resource>, RootState> {
+export interface ResourceModule
+  <Resource extends SerializedDocument<Resource>>
+  extends Module<ResourceState<Resource>, RootState> {
     namespaced: true;
     state: ResourceState<Resource>;
     getters: ResourceGetters<Resource>;

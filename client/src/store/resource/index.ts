@@ -5,7 +5,6 @@ import { conditionModule } from './condition';
 import { domainModule } from './domain';
 import { interceptModule } from './intercept';
 import { responseModule } from './response';
-import { snapshotModule } from './snapshot';
 import { userModule } from './user';
 import { ResourceModuleState } from './ResourceModuleState';
 
@@ -16,7 +15,6 @@ export const resourceModule: Module< ResourceModuleState, RootState > = {
     domain: domainModule,
     intercept: interceptModule,
     response: responseModule,
-    snapshot: snapshotModule,
     user: userModule,
   },
 };

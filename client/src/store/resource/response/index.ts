@@ -1,10 +1,9 @@
 import { generateModule } from '@client/utils/store/generate-module';
-import { Resource, ResourceName } from '@definitions';
-import { ResponseData } from '@server/resources/response';
+import { SerializedResponse } from '@server/resources/response';
 import { Module } from 'vuex';
 import { ResourceState, RootState } from '@client/utils/store/resource-module';
 
-export type Response = Resource< ResourceName.response, ResponseData >;
+export type Response = SerializedResponse;
 export type ResponseState = ResourceState< Response >;
 
 const baseModule = generateModule< Response >('response');

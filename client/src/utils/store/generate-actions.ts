@@ -130,7 +130,7 @@ export function generateActions<Resource>(url: string):
 
     async update({ commit }, payload) {
       const res = await call(commit, `${url}/${payload.identifier}`, {
-        body: JSON.stringify(payload.operations),
+        body: JSON.stringify({ updates: payload.operations }),
         headers: {
           'Content-Type': 'application/json',
         },

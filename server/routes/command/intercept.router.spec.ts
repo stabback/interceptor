@@ -1,17 +1,18 @@
 import app from '@server/app';
-import { Condition, ConditionService, ConditionType } from '@server/resources/condition';
-import {DomainService } from '@server/resources/domain';
-import { Intercept, InterceptService } from '@server/resources/intercept';
-import { Response, ResponseService } from '@server/resources/response';
+import { ConditionService, ConditionDocument } from '@server/resources/condition';
+import {DomainService, DomainDocument } from '@server/resources/domain';
+import { InterceptService, InterceptDocument } from '@server/resources/intercept';
+import { ResponseService, ResponseDocument } from '@server/resources/response';
 import supertest from 'supertest';
+import TestDB from '@server/test.db';
+import { Types } from 'mongoose';
 
 const request = supertest(app);
 
 describe('intercept route', () => {
-    beforeEach(() => {
-        InterceptService.items = [];
-        DomainService.items = [];
-    });
+    beforeAll(async () => await TestDB.connect());
+    afterEach(async () => await TestDB.clearDatabase());
+    afterAll(async () => await TestDB.closeDatabase());
 
     describe('GET /intercept', () => {
         it('returns a 200', async (done) => {
@@ -27,8 +28,8 @@ describe('intercept route', () => {
         });
 
         it('returns a number of items equal to the number of intercepts', async (done) => {
-            InterceptService.create('foo');
-            InterceptService.create('bar');
+            await InterceptService.create('foo');
+            await InterceptService.create('bar');
 
             const res = await request.get('/command/intercept');
             expect(res.body.items.length).toBe(2);
@@ -44,7 +45,7 @@ describe('intercept route', () => {
 
     describe('POST /intercept', () => {
         it('returns an error if the domain is not valid', async (done) => {
-            DomainService.create('foo', 'http://example.com', 'foo');
+            await DomainService.create('foo', 'http://example.com', 'foo');
 
             const res = await request
                 .post('/command/intercept')
@@ -53,25 +54,24 @@ describe('intercept route', () => {
                     name: 'baz',
                 });
 
-            expect(res.status).toBe(404);
-            done();
-        });
-
-        it('returns an error if the name param is not present', async (done) => {
-            DomainService.create('foo', 'http://example.com', 'foo');
-
-            const res = await request
-                .post('/command/intercept')
-                .send({
-                    domain: 'foo',
-                });
-
             expect(res.status).toBe(400);
             done();
         });
 
+        it('returns an error if the name param is not present', async (done) => {
+            await DomainService.create('foo', 'http://example.com', 'foo');
+
+            request
+                .post('/command/intercept')
+                .send({
+                    domain: 'foo',
+                })
+                .expect(400, done)
+
+        });
+
         it('returns an error if the intercept name is not unique', async (done) => {
-            const domain = DomainService.create('foo', 'http://example.com', 'foo');
+            const domain = await DomainService.create('foo', 'http://example.com', 'foo');
 
             await request
                 .post('/command/intercept')
@@ -92,37 +92,37 @@ describe('intercept route', () => {
         });
 
         it('returns the created intercept', async (done) => {
-            const domain = DomainService.create('foo', 'http://example.com', 'foo');
-
+            const domain = await DomainService.create('foo', 'http://example.com', 'foo');
             const res = await request
                 .post('/command/intercept')
                 .send({
-                    conditions: ['a', 'b', 'c'],
+                    conditions: [],
                     domain: domain.id,
                     name: 'bar',
-                    responses: ['x', 'y', 'z'],
+                    responses: [],
                 });
+            
 
             expect(res.body.data.name).toBe('bar');
-            expect(res.body.data.conditions).toEqual(['a', 'b', 'c']);
-            expect(res.body.data.responses).toEqual(['x', 'y', 'z']);
             expect(res.status).toBe(201);
             done();
         });
 
         it('adds the intercept to the domain', async (done) => {
-            const domain = DomainService.create('foo', 'http://example.com', 'foo');
+            const domain = await DomainService.create('foo', 'http://example.com', 'foo');
 
             const res = await request
                 .post('/command/intercept')
                 .send({
-                    conditions: ['a', 'b', 'c'],
+                    conditions: [Types.ObjectId('aaaaaaaaaaaa'), Types.ObjectId('bbbbbbbbbbbb')],
                     domain: domain.id,
                     name: 'bar',
-                    responses: ['x', 'y', 'z'],
+                    responses: [Types.ObjectId('xxxxxxxxxxxx'), Types.ObjectId('yyyyyyyyyyyy')],
                 });
 
-            expect(domain.data.intercepts.includes(res.body.id)).toBeTruthy();
+            const updatedDomain = await DomainService.getByIdentifier(domain.id) as DomainDocument;
+
+            expect(updatedDomain.intercepts.includes(res.body.id)).toBeTruthy();
             done();
         });
     });
@@ -135,7 +135,7 @@ describe('intercept route', () => {
         });
 
         it('returns the intercept if found', async (done) => {
-            const foo = InterceptService.create('foo');
+            const foo = await InterceptService.create('foo');
 
             const res = await request.get(`/command/intercept/${foo.id}`);
             expect(res.body.id).toEqual(foo.id);
@@ -144,25 +144,24 @@ describe('intercept route', () => {
     });
 
     describe('DELETE /intercept/:intercept', () => {
-        let foo: Intercept;
-        beforeEach(() => {
-            foo = InterceptService.create('foo');
+        let foo: InterceptDocument;
+        beforeEach(async () => {
+            foo = await InterceptService.create('foo');
         });
-        afterEach(() => {
+        afterEach(async () => {
             // Sanity check to make sure other items aren't being deleted
-            expect(
-                InterceptService.get(foo.id),
-            ).toEqual(foo);
+            const item = await InterceptService.get(foo.id) as InterceptDocument;
+            expect(item.id).toEqual(foo.id);
         });
 
-        it('404s if intercept is not found', async (done) => {
+        it('204s if intercept is not found', async (done) => {
             const res = await request.delete('/command/intercept/bar');
-            expect(res.status).toBe(404);
+            expect(res.status).toBe(204);
             done();
         });
 
         it('deletes the intercept', async (done) => {
-            const bar = InterceptService.create('bar');
+            const bar = await InterceptService.create('bar');
             const res = await request.delete(`/command/intercept/${bar.id}`);
             expect(res.status).toBe(204);
             expect(
@@ -171,40 +170,43 @@ describe('intercept route', () => {
             done();
         });
         it('removes the intercept from all domains', async (done) => {
-            const bar = InterceptService.create('bar');
-            const domain = DomainService.create('domain', 'http://example.com', 'domain');
-            domain.addIntercept(bar.id);
+            const bar = await InterceptService.create('bar');
+            const domain = await DomainService.create('domain', 'http://example.com', 'domain');
+            await domain.addIntercept(bar.id);
 
             const res = await request.delete(`/command/intercept/${bar.id}`);
             expect(res.status).toBe(204);
-            expect(domain.data.intercepts.includes(bar.id)).toBeFalsy();
+
+            const updatedDomain = await DomainService.getByIdentifier(domain.id) as DomainDocument;
+            expect(updatedDomain.intercepts.includes(bar.id)).toBeFalsy();
 
             done();
         });
     });
 
     describe('PATCH /intercept/:intercept', () => {
-        let foo: Intercept;
-        beforeEach(() => {
-            foo = InterceptService.create('foo');
+        let foo: InterceptDocument;
+        beforeEach(async () => {
+            foo = await InterceptService.create('foo');
         });
 
         it('404s if intercept is not found', async (done) => {
-            const res = await request.patch('/command/intercept/bar');
-            expect(res.status).toBe(404);
-            done();
+            request
+                .patch('/command/' + Types.ObjectId() + '/bar')
+                .expect(404, done);
         });
 
         it('updates an intercept', async (done) => {
 
             const before = await request.get(`/command/intercept/${foo.id}`);
-            expect(before.body.data.locked).toBeFalsy();
+            expect(before.body.locked).toBeFalsy();
 
             await request
                 .patch(`/command/intercept/${foo.id}`)
-                .send([{path: '/data/locked', op: 'replace', value: true}]);
+                .send({ updates: [{ path: '/locked', op: 'replace', value: true }] });
 
             const after = await request.get(`/command/intercept/${foo.id}`);
+
             expect(after.body.data.locked).toBeTruthy();
             done();
         });
@@ -212,7 +214,7 @@ describe('intercept route', () => {
         it('returns the updated intercept in the response', async (done) => {
             const res = await request
                 .patch(`/command/intercept/${foo.id}`)
-                .send([{path: '/data/locked', op: 'replace', value: true}]);
+                .send({ updates: [{ path: '/locked', op: 'replace', value: true }] });
 
             expect(res.status).toBe(200);
             expect(res.body.id).toBe(foo.id);
@@ -231,24 +233,24 @@ describe('intercept route', () => {
     });
 
     describe('GET /intercept/:intercept/condition', () => {
-        let foo: Intercept;
-        let bar: Intercept;
+        let foo: InterceptDocument;
+        let bar: InterceptDocument;
 
-        let conditionA: Condition;
-        let conditionB: Condition;
-        let conditionC: Condition;
+        let conditionA: ConditionDocument;
+        let conditionB: ConditionDocument;
+        let conditionC: ConditionDocument;
 
-        beforeEach(() => {
-            foo = InterceptService.create('foo');
-            bar = InterceptService.create('bar');
+        beforeEach(async () => {
+            foo = await InterceptService.create('foo');
+            bar = await InterceptService.create('bar');
 
-            conditionA = ConditionService.create(ConditionType.Method, { method: 'GET' });
-            conditionB = ConditionService.create(ConditionType.Method, { method: 'POST' });
-            conditionC = ConditionService.create(ConditionType.Method, { method: 'PATCH' });
+            conditionA = await ConditionService.create('method', { method: 'GET' });
+            conditionB = await ConditionService.create('method', { method: 'POST' });
+            conditionC = await ConditionService.create('method', { method: 'PATCH' });
 
-            foo.addCondition(conditionA.id);
-            foo.addCondition(conditionB.id);
-            bar.addCondition(conditionC.id);
+            await foo.addCondition(conditionA.id);
+            await foo.addCondition(conditionB.id);
+            await bar.addCondition(conditionC.id);
         });
 
         it('404s if intercept is not found', async (done) => {
@@ -274,28 +276,31 @@ describe('intercept route', () => {
     });
 
     describe('GET /intercept/:intercept/response', () => {
-        let foo: Intercept;
-        let bar: Intercept;
+        let foo: InterceptDocument;
+        let bar: InterceptDocument;
 
-        let responseA: Response;
-        let responseB: Response;
-        let responseC: Response;
+        let responseA: ResponseDocument;
+        let responseB: ResponseDocument;
+        let responseC: ResponseDocument;
 
-        beforeEach(() => {
-            foo = InterceptService.create('foo');
-            bar = InterceptService.create('bar');
+        beforeEach(async () => {
+            foo = await InterceptService.create('foo');
+            bar = await InterceptService.create('bar');
 
-            responseA = ResponseService.create('foo', 200, {}, 'foo', 200);
-            responseB = ResponseService.create('bar', 200, {}, 'bar', 200);
-            responseC = ResponseService.create('baz', 200, {}, 'baz', 200);
+            responseA = await ResponseService.create('foo', 'foo', [], 200, 200);
+            responseB = await ResponseService.create('bar', 'bar', [], 200, 200);
+            responseC = await ResponseService.create('baz', 'baz', [], 200, 200);
 
-            foo.addResponse(responseA.id);
-            foo.addResponse(responseB.id);
-            bar.addResponse(responseC.id);
+
+            await foo.addResponse(responseA.id);
+            await foo.addResponse(responseB.id);
+
+            await bar.addResponse(responseC.id);
+
         });
 
-        it('404s if intercept is not found', async (done) => {
-            const res = await request.get('/command/intercept/foobar/response');
+        it('404s if intercept is not found here', async (done) => {
+            const res = await request.get('/command/intercept/abc123456def/response');
             expect(res.status).toBe(404);
             done();
         });

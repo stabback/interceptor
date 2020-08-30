@@ -54,7 +54,7 @@ import Vue from 'vue';
 
 import ConfigureDomainModal from '@client/components/modal/ConfigureDomain.vue';
 import DeleteDomainModal from '@client/components/modal/DeleteDomain.vue';
-import { Domain } from '@server/resources/domain';
+import { Domain } from '@client/store/resource/domain';
 import { BvModalEvent, BvTableFieldArray } from 'bootstrap-vue';
 
 interface Data {
@@ -117,8 +117,6 @@ export default Vue.extend({
 
       if (this.subject) {
         this.$bvModal.show('delete-domain');
-      } else {
-        console.error('Attempting to delete a domain that does not exist');
       }
     },
 
@@ -127,8 +125,6 @@ export default Vue.extend({
 
       if (this.subject) {
         this.$bvModal.show('configure-domain');
-      } else {
-        console.error('Attempting to edit a domain that does not exist');
       }
     },
   },

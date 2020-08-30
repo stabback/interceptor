@@ -1,10 +1,9 @@
 import { generateModule } from '@client/utils/store/generate-module';
-import { Resource, ResourceName } from '@definitions';
-import { DomainData } from '@server/resources/domain';
+import { SerializedDomain } from '@server/resources/domain';
 import { Module } from 'vuex';
 import { ResourceState, RootState } from '@client/utils/store/resource-module';
 
-export type Domain = Resource< ResourceName.domain, DomainData >;
+export type Domain = SerializedDomain;
 export type DomainState = ResourceState< Domain >;
 
 const baseModule = generateModule< Domain >('domain');

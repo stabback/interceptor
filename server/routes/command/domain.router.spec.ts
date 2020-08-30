@@ -1,14 +1,16 @@
 import app from '@server/app';
-import { Domain, DomainService } from '@server/resources/domain';
-import { Intercept, InterceptService } from '@server/resources/intercept';
+import {  DomainService, DomainDocument } from '@server/resources/domain';
+import { InterceptService, InterceptDocument } from '@server/resources/intercept';
 import supertest from 'supertest';
+import TestDB from '@server/test.db';
+import { Types } from 'mongoose';
 
 const request = supertest(app);
 
 describe('domain route', () => {
-    beforeEach(() => {
-        DomainService.items = [];
-    });
+    beforeAll(async () => await TestDB.connect());
+    afterEach(async () => await TestDB.clearDatabase());
+    afterAll(async () => await TestDB.closeDatabase());
 
     describe('GET /domain', () => {
         it('returns a 200', async (done) => {
@@ -24,8 +26,8 @@ describe('domain route', () => {
         });
 
         it('returns a number of items equal to the number of domains', async (done) => {
-            DomainService.create('foo', 'foo', 'foo');
-            DomainService.create('bar', 'bar', 'bar');
+            await DomainService.create('foo', 'foo', 'foo');
+            await DomainService.create('bar', 'bar', 'bar');
 
             const res = await request.get('/command/domain');
             expect(res.body.items.length).toBe(2);
@@ -41,7 +43,7 @@ describe('domain route', () => {
 
     describe('POST /domain', () => {
         it('returns an error if the name param is not present', async (done) => {
-            DomainService.create('foo', 'http://example.com', 'foo');
+            await DomainService.create('foo', 'http://example.com', 'foo');
 
             const res = await request
                 .post('/command/domain')
@@ -55,7 +57,7 @@ describe('domain route', () => {
         });
 
         it('returns an error if the key param is not present', async (done) => {
-            DomainService.create('foo', 'http://example.com', 'foo');
+            await DomainService.create('foo', 'http://example.com', 'foo');
 
             const res = await request
                 .post('/command/domain')
@@ -69,7 +71,7 @@ describe('domain route', () => {
         });
 
         it('returns an error if the url param is not present', async (done) => {
-            DomainService.create('foo', 'http://example.com', 'foo');
+            await DomainService.create('foo', 'http://example.com', 'foo');
 
             const res = await request
                 .post('/command/domain')
@@ -128,7 +130,7 @@ describe('domain route', () => {
         });
 
         it('returns the domain if found', async (done) => {
-            const foo = DomainService.create('foo', 'foo', 'foo');
+            const foo = await DomainService.create('foo', 'foo', 'foo');
 
             const res = await request.get(`/command/domain/${foo.id}`);
             expect(res.body.id).toEqual(foo.id);
@@ -137,25 +139,24 @@ describe('domain route', () => {
     });
 
     describe('DELETE /domain/:domain', () => {
-        let foo: Domain;
-        beforeEach(() => {
-            foo = DomainService.create('foo', 'foo', 'foo');
+        let foo: DomainDocument;
+        beforeEach(async () => {
+            foo = await DomainService.create('foo', 'foo', 'foo');
         });
-        afterEach(() => {
+        afterEach(async () => {
             // Sanity check to make sure other items aren't being deleted
-            expect(
-                DomainService.get(foo.id),
-            ).toEqual(foo);
+            const item = await DomainService.getByIdentifier(foo.id) as DomainDocument
+            expect(item.id).toEqual(foo.id);
         });
 
-        it('404s if domain is not found', async (done) => {
-            const res = await request.delete('/command/domain/bar');
-            expect(res.status).toBe(404);
-            done();
+        it('204s if domain is not found', async (done) => {
+            request
+                .delete('/command/domain/bar')
+                .expect(204, done);
         });
 
         it('deletes the domain', async (done) => {
-            const bar = DomainService.create('bar', 'bar', 'bar');
+            const bar = await DomainService.create('bar', 'bar', 'bar');
             const res = await request.delete(`/command/domain/${bar.id}`);
             expect(res.status).toBe(204);
             expect(
@@ -166,9 +167,9 @@ describe('domain route', () => {
     });
 
     describe('PATCH /domain/:domain', () => {
-        let foo: Domain;
-        beforeEach(() => {
-            foo = DomainService.create('foo', 'foo', 'foo');
+        let foo: DomainDocument;
+        beforeEach(async () => {
+            foo = await DomainService.create('foo', 'foo', 'foo');
         });
 
         it('404s if domain is not found', async (done) => {
@@ -184,17 +185,17 @@ describe('domain route', () => {
 
             await request
                 .patch(`/command/domain/${foo.id}`)
-                .send([{path: '/data/locked', op: 'replace', value: true}]);
+                .send({updates: [{path: '/url', op: 'replace', value: 'FOO'}]});
 
             const after = await request.get(`/command/domain/${foo.id}`);
-            expect(after.body.data.locked).toBeTruthy();
+            expect(after.body.data.url).toBe('FOO');
             done();
         });
 
         it('returns the updated domain in the response', async (done) => {
             const res = await request
                 .patch(`/command/domain/${foo.id}`)
-                .send([{path: '/data/url', op: 'replace', value: 'FOO'}]);
+                .send({updates: [{path: '/url', op: 'replace', value: 'FOO'}]});
 
             expect(res.status).toBe(200);
             expect(res.body.data.url).toBe('FOO');
@@ -213,30 +214,29 @@ describe('domain route', () => {
     });
 
     describe('GET /domain/:domain/intercept', () => {
-        let foo: Domain;
-        let bar: Domain;
+        let foo: DomainDocument;
+        let bar: DomainDocument;
 
-        let interceptA: Intercept;
-        let interceptB: Intercept;
-        let interceptC: Intercept;
+        let interceptA: InterceptDocument;
+        let interceptB: InterceptDocument;
+        let interceptC: InterceptDocument;
 
-        beforeEach(() => {
-            foo = DomainService.create('foo', 'foo', 'foo');
-            bar = DomainService.create('bar', 'bar', 'bar');
+        beforeEach(async () => {
+            foo = await DomainService.create('foo', 'foo', 'foo');
+            bar = await DomainService.create('bar', 'bar', 'bar');
 
-            interceptA = InterceptService.create('a');
-            interceptB = InterceptService.create('b');
-            interceptC = InterceptService.create('c');
+            interceptA = await InterceptService.create('a');
+            interceptB = await InterceptService.create('b');
+            interceptC = await InterceptService.create('c');
 
-            foo.addIntercept(interceptA.id);
-            foo.addIntercept(interceptB.id);
-            bar.addIntercept(interceptC.id);
+            await foo.addIntercept(interceptA.id);
+            await foo.addIntercept(interceptB.id);
+            await bar.addIntercept(interceptC.id);
         });
 
         it('404s if domain is not found', async (done) => {
-            const res = await request.get('/command/domain/foobar/intercept');
-            expect(res.status).toBe(404);
-            done();
+            request.get('/command/domain/' + Types.ObjectId() + '/intercept')
+                .expect(404, done)
         });
 
         it('returns all intercept for an domain', async (done) => {

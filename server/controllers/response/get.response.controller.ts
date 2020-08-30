@@ -1,9 +1,15 @@
 import { Request as ExpressRequest, Response as ExpressResponse } from 'express';
 
-import { Response, ResponseService } from '@server/resources/response';
+import { ResponseService } from '@server/resources/response';
 
-export default function get(req: ExpressRequest, res: ExpressResponse) {
-  const response = ResponseService.get(req.params.response) as Response;
+export default async function get(req: ExpressRequest, res: ExpressResponse) {
+  const id = req.params.response;
 
-  res.send(response.asResponse);
+  const response = await ResponseService.get(id);
+
+  if (!response) {
+    return res.status(404).send();
+  }
+
+  return res.send(response);
 }

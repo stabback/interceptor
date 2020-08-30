@@ -1,8 +1,8 @@
 import { Request as ExpressRequest } from 'express';
 
-import { BaseResource } from '@definitions';
-import { ServiceClass } from '@server/definitions';
-import { ApiError, ErrorService } from '@server/resources/error';
+import { Service } from '@server/definitions';
+import { ServerErrorService, ServerErrorDocument } from '@server/resources/server-error';
+import { Document } from 'mongoose';
 
 export enum VALIDATION_ERRORS {
     NOT_PROVIDED = 'VALIDATION_ERROR_NOT_PROVIDED',
@@ -10,10 +10,11 @@ export enum VALIDATION_ERRORS {
 }
 
 interface ValidationResult {
-    errors: ApiError[];
-    item: BaseResource | undefined;
+    errors: ServerErrorDocument[];
+    item: Document | undefined;
     status: number;
 }
+
 /**
  *
  * @param key The key the api item will provide the param as.  example.com/*:item*\/14 would have
@@ -22,11 +23,17 @@ interface ValidationResult {
  *  param
  * @param req The raw express req.  req.params and req.body will be searched for the param value.
  */
-export default function baseValidationMiddleware(
+export default async function baseValidationMiddleware(
   key: string,
-  service: ServiceClass,
+  service: {
+    new(): Service;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    get?(id: any): any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    getByIdentifier?(identifier: string): any;
+  },
   req: ExpressRequest,
-): ValidationResult {
+): Promise<ValidationResult> {
   const validation: ValidationResult = {
     errors: [],
     item: undefined,
@@ -37,22 +44,24 @@ export default function baseValidationMiddleware(
 
   if (!identifier) {
     validation.errors.push(
-      ErrorService.create(
+      await ServerErrorService.create(
         VALIDATION_ERRORS.NOT_PROVIDED,
         `The paramater ${key} is missing`,
       ),
     );
     validation.status = 400;
   } else {
-    validation.item = service.get(identifier);
+    if ('get' in service && service.get) {
+      validation.item = await service.get(identifier);
+    }
 
-    if (!validation.item && 'getByKey' in service) {
-      validation.item = service.getByKey(identifier);
+    if (!validation.item && 'getByIdentifier' in service && service.getByIdentifier) {
+      validation.item = await service.getByIdentifier(identifier);
     }
 
     if (!validation.item) {
       validation.errors.push(
-        ErrorService.create(
+        await ServerErrorService.create(
           VALIDATION_ERRORS.NOT_FOUND,
           `The paramater ${key} with value [${identifier}] could not be used to find an item`,
         ),

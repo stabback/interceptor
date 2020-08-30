@@ -77,7 +77,7 @@ import Vue, { PropType } from 'vue';
 import { compare } from 'fast-json-patch';
 
 import Errors from '@client/components/Errors.vue';
-import { Domain } from '@server/resources/domain';
+import { Domain } from '@client/store/resource/domain';
 
 const DEFAULT_FORM = {
   key: '',

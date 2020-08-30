@@ -1,9 +1,9 @@
-import { ErrorService } from '@server/resources/error';
+import { ServerErrorService } from '@server/resources/server-error';
 
 import validateRequiredParams from './validate-required-params';
 
-jest.mock('@server/resources/error', () => ({
-    ErrorService: {
+jest.mock('@server/resources/server-error', () => ({
+    ServerErrorService: {
         buildPayload: jest.fn(),
         create: jest.fn(),
     },
@@ -15,40 +15,40 @@ describe('validate-required-params util', () => {
         jest.clearAllMocks();
     });
 
-    it('returns an empty array if no params', () => {
-        const result = validateRequiredParams({});
+    it('returns an empty array if no params', async () => {
+        const result = await validateRequiredParams({});
         expect(result.length).toBe(0);
     });
 
-    it('returns an empty array if all params are provided', () => {
-        const result = validateRequiredParams({
+    it('returns an empty array if all params are provided', async () => {
+        const result = await validateRequiredParams({
             bar: 'baz',
             foo: 'bar',
         });
         expect(result.length).toBe(0);
     });
 
-    it('creates an error for every undefined param', () => {
-        validateRequiredParams({
+    it('creates an error for every undefined param', async () => {
+        await validateRequiredParams({
             bar: undefined,
             foo: undefined,
         });
 
-        expect(ErrorService.create).toHaveBeenCalledTimes(2);
+        expect(ServerErrorService.create).toHaveBeenCalledTimes(2);
     });
 
-    it('creates an error for every empty string param', () => {
-        validateRequiredParams({
+    it('creates an error for every empty string param', async () => {
+        await validateRequiredParams({
             bar: '',
             baz: '',
             foo: '',
         });
 
-        expect(ErrorService.create).toHaveBeenCalledTimes(3);
+        expect(ServerErrorService.create).toHaveBeenCalledTimes(3);
     });
 
-    it('returns every error in an array', () => {
-        const result = validateRequiredParams({
+    it('returns every error in an array', async () => {
+        const result = await validateRequiredParams({
             bar: '',
             baz: 'hello',
             foo: '',
@@ -57,7 +57,7 @@ describe('validate-required-params util', () => {
         expect(result.length).toBe(2);
     });
 
-    it('automatically sends a response if res is provided', () => {
+    it('automatically sends a response if res is provided', async () => {
         // const res = new Response();
         // jest.spyOn(res, "status");
         // jest.spyOn(res, "send");
@@ -68,7 +68,7 @@ describe('validate-required-params util', () => {
         //     foo: "",
         // }, "VALIDATION", res);
 
-        // expect(ErrorService.buildPayload).toHaveBeenCalled();
+        // expect(ServerErrorService.buildPayload).toHaveBeenCalled();
         // expect(res.status).toBeCalledWith(400);
         // expect(res.send).toHaveBeenCalled();
     });

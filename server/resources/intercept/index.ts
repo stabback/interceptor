@@ -1,2 +1,2 @@
 export * from './intercept.model';
-export { default as InterceptService } from './intercept.service';
+export * from './intercept.service';

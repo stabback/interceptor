@@ -1,27 +1,22 @@
 import { Request as ExpressRequest, Response as ExpressResponse } from 'express';
 
-import { ErrorService } from '@server/resources/error';
+import { ServerErrorService } from '@server/resources/server-error';
 import { UserService } from '@server/resources/user';
 import { validateRequiredParams } from '@server/utils';
 
-export default function create(req: ExpressRequest, res: ExpressResponse) {
+export default async function create(req: ExpressRequest, res: ExpressResponse) {
   const { key } = req.body;
 
-  const errors = validateRequiredParams({ key }, 'CREATE_USER_VALIDATION_ERROR', res);
+  const errors = await validateRequiredParams({ key }, 'CREATE_USER_VALIDATION_ERROR', res);
   if (errors.length > 0) { return res; }
+  let user;
 
-  if (UserService.items.some((u) => u.data.key === key)) {
-    errors.push(
-      ErrorService.create(
-        'POST_USER_DUPLICATE_KEY',
-        `Users must have a unique key.  The key ${key} is in use.`,
-      ),
-    );
-
-    return res.status(400).send(ErrorService.buildPayload(errors));
+  try {
+    user = await UserService.create(key);
+  } catch (e) {
+    const error = await ServerErrorService.create(e, 'CREATE_USER_ERROR');
+    return res.status(400).send(error);
   }
 
-  const user = UserService.create(key);
-
-  return res.status(201).send(user.asResponse);
+  return res.status(201).send(user);
 }

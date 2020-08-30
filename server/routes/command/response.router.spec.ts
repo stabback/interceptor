@@ -1,14 +1,15 @@
 import app from '@server/app';
-import { Intercept, InterceptService } from '@server/resources/intercept';
-import { Response, ResponseService } from '@server/resources/response';
+import { InterceptService, InterceptDocument } from '@server/resources/intercept';
+import { ResponseService, ResponseDocument } from '@server/resources/response';
 import supertest from 'supertest';
+import TestDB from '@server/test.db';
 
 const request = supertest(app);
 
 describe('response route', () => {
-    beforeEach(() => {
-        ResponseService.items = [];
-    });
+    beforeAll(async () => await TestDB.connect());
+    afterEach(async () => await TestDB.clearDatabase());
+    afterAll(async () => await TestDB.closeDatabase());
 
     describe('GET /response', () => {
         it('returns a 200', async (done) => {
@@ -24,8 +25,8 @@ describe('response route', () => {
         });
 
         it('returns a number of items equal to the number of responses', async (done) => {
-            ResponseService.create('foo', 200, {}, 'foo', 200);
-            ResponseService.create('bar', 200, {}, 'bar', 200);
+            await ResponseService.create('foo', 'foo', [], 200, 200);
+            await ResponseService.create('bar', 'bar', [], 200, 200);
 
             const res = await request.get('/command/response');
             expect(res.body.items.length).toBe(2);
@@ -40,10 +41,10 @@ describe('response route', () => {
     });
 
     describe('POST /response', () => {
-        let intercept: Intercept;
+        let intercept: InterceptDocument;
 
-        beforeEach(() => {
-            intercept = InterceptService.create('foo');
+        beforeEach(async () => {
+            intercept = await InterceptService.create('foo');
         });
 
         it('returns an error if the intercept param is not present', (done) => {
@@ -92,6 +93,7 @@ describe('response route', () => {
                     intercept: intercept.id,
                     name: 'bar',
                 });
+        
 
             expect(res.body.data.name).toBe('bar');
             expect(res.status).toBe(201);
@@ -105,8 +107,10 @@ describe('response route', () => {
                     intercept: intercept.id,
                     name: 'bar',
                 });
+            
+            const updatedIntercept = await InterceptService.get(intercept.id) as InterceptDocument
 
-            expect(intercept.data.responses.includes(res.body.id)).toBeTruthy();
+            expect(updatedIntercept.responses.includes(res.body.id)).toBeTruthy();
             done();
         });
     });
@@ -119,7 +123,7 @@ describe('response route', () => {
         });
 
         it('returns the response if found', async (done) => {
-            const foo = ResponseService.create('foo', 200, {}, 'foo', 200);
+            const foo = await ResponseService.create('foo', 'foo', [], 200, 200);
 
             const res = await request.get(`/command/response/${foo.id}`);
             expect(res.body.id).toEqual(foo.id);
@@ -128,41 +132,43 @@ describe('response route', () => {
     });
 
     describe('DELETE /response/:response', () => {
-        let foo: Response;
-        beforeEach(() => {
-            foo = ResponseService.create('foo', 200, {}, 'foo', 200);
+        let foo: ResponseDocument;
+        beforeEach(async () => {
+            foo = await ResponseService.create('foo', 'foo', [], 200, 200);
         });
-        afterEach(() => {
+        afterEach(async () => {
             // Sanity check to make sure other items aren't being deleted
             expect(
-                ResponseService.get(foo.id),
-            ).toEqual(foo);
+                (await ResponseService.get(foo.id) as ResponseDocument).id,
+            ).toEqual(foo.id);
         });
 
-        it('404s if response is not found', async (done) => {
+        it('204s if response is not found', async (done) => {
             const res = await request.delete('/command/response/bar');
-            expect(res.status).toBe(404);
+            expect(res.status).toBe(204);
             done();
         });
 
         it('deletes the response', async (done) => {
-            const bar = ResponseService.create('bar', 200, {}, 'bar', 200);
+            const bar = await ResponseService.create('bar', 'bar', [], 200, 200);
             const res = await request.delete(`/command/response/${bar.id}`);
             expect(res.status).toBe(204);
-            expect(
-                (await request.get(`/command/response/${bar.id}`)).status,
-            ).toBe(404);
+
+            const missingBar = await request.get(`/command/response/${bar.id}`);
+            expect(missingBar.status).toBe(404);
             done();
         });
 
         it('removes the response from all domains', async (done) => {
-            const bar = ResponseService.create('bar', 200, {}, 'bar', 200);
-            const intercept = InterceptService.create('foo');
-            intercept.addResponse(bar.id);
+            const bar = await ResponseService.create('bar', 'bar', [], 200, 200);
+            const intercept = await InterceptService.create('foo');
+            await intercept.addResponse(bar.id);
 
             const res = await request.delete(`/command/response/${bar.id}`);
             expect(res.status).toBe(204);
-            expect(intercept.data.responses.includes(bar.id)).toBeFalsy();
+
+            const updatedIntercept = await InterceptService.get(intercept.id) as InterceptDocument;
+            expect(updatedIntercept.responses.includes(bar.id)).toBeFalsy();
 
             done();
         });

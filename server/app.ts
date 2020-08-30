@@ -1,18 +1,11 @@
-import dotenv from 'dotenv';
-
 import express, { Request as ExpressRequest, Response as ExpressResponse } from 'express';
 
 import createProxyMiddleware from 'http-proxy-middleware';
 import logger from 'morgan';
 import path from 'path';
 
-import adminRouter from './routes/admin.router';
 import callRouter from './routes/call.router';
 import commandRouter from './routes/command.router';
-
-dotenv.config({
-  path: path.resolve(__dirname, '..', `.env.${process.env.NODE_ENV} || 'local'`),
-});
 
 const app = express();
 
@@ -21,7 +14,6 @@ app.use(express.urlencoded({ extended: false }));
 
 app.use('/call', callRouter);
 app.use('/command', commandRouter);
-app.use('/admin', adminRouter);
 
 if (process.env.NODE_ENV === 'development') {
   app.use(logger('dev'));

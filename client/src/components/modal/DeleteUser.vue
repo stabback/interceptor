@@ -18,7 +18,7 @@
 
 <script lang="ts">
 import Vue, { PropType } from 'vue';
-import { User } from '@server/resources/user';
+import { User } from '@client/store/resource/user';
 
 export default Vue.extend({
   name: 'ModalDeleteUser',

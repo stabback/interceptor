@@ -147,7 +147,7 @@ import 'codemirror/theme/xq-light.css';
 import HeadersModal from '@client/components/modal/Headers.vue';
 
 import Errors from '@client/components/Errors.vue';
-import { Intercept } from '@server/resources/intercept';
+import { Intercept } from '@client/store/resource/intercept';
 
 const DEFAULT_FORM = {
   body: '',
@@ -199,31 +199,16 @@ export default Vue.extend({
   },
 
   methods: {
-    onAddHeader() {
-      if (!this.state.newHeader.name || !this.state.newHeader.value) { return; }
-      Vue.set(
-        this.state.form.headers,
-        this.state.newHeader.name,
-        this.state.newHeader.value,
-      );
-    },
-
-    onRemoveHeader(name: string) {
-      Vue.delete(this.state.form.headers, name);
-    },
-
     async onSubmit() {
       const item = {
         intercept: this.intercept.id,
         ...this.state.form,
-        headers: this.state.form.headers,
+        headers: Object.entries(this.state.form.headers).map(([name, value]) => ({ name, value })),
       };
 
       if (this.state.form.hasBody) {
         item.body = this.state.form.body;
       }
-
-      console.log(JSON.parse(JSON.stringify(this.state)), item);
 
       await this.$store.dispatch('resource/response/create', item);
 
@@ -237,3 +222,9 @@ export default Vue.extend({
 
 });
 </script>
+
+<style lang="scss">
+.vue-codemirror {
+  cursor: text;
+}
+</style>

@@ -1,27 +1,34 @@
 import { Request as ExpressRequest, Response as ExpressResponse } from 'express';
 
-import { DomainService } from '@server/resources/domain';
-import { ErrorService } from '@server/resources/error';
+import { DomainService, Domain } from '@server/resources/domain';
+import { ServerErrorService } from '@server/resources/server-error';
 import { validateRequiredParams } from '@server/utils';
 
-export default function create(req: ExpressRequest, res: ExpressResponse) {
+export default async function create(req: ExpressRequest, res: ExpressResponse) {
   const { name, url, key } = req.body;
 
-  const errors = validateRequiredParams({ name, url, key }, 'CREATE_DOMAIN_VALIDATION_ERROR', res);
+  const errors = await validateRequiredParams({ name, url, key }, 'CREATE_DOMAIN_VALIDATION_ERROR', res);
   if (errors.length > 0) { return res; }
 
-  if (DomainService.items.some((d) => d.data.key === key)) {
-    errors.push(
-      ErrorService.create(
-        'POST_DOMAIN_DUPLICATE_KEY',
-        `Domains must have a unique key.  The key ${key} is in use.`,
+  let domain;
+
+  const existingDomain = await Domain.find({ key });
+
+  if (existingDomain.length > 0) {
+    return res.status(400).send(
+      await ServerErrorService.create(
+        'CREATE_DOMAIN_ERROR_DUPLICATE_KEY',
+        'Domain keys must be unique',
       ),
     );
-
-    return res.status(400).send(ErrorService.buildPayload(errors));
   }
 
-  const domain = DomainService.create(name, url, key);
+  try {
+    domain = await DomainService.create(name, url, key);
+  } catch (e) {
+    const error = await ServerErrorService.create('CREATE_DOMAIN_ERROR', e);
+    return res.status(500).send(error);
+  }
 
-  return res.status(201).send(domain.asResponse);
+  return res.status(201).send(domain);
 }

@@ -44,13 +44,13 @@
           </b-button>
 
           <span
-            v-if="condition.data.type === 'url'"
+            v-if="condition.data.conditionType === 'url'"
           >
-            URL matches pattern <strong>{{ condition.data.rule.pattern }}</strong>
+            URL matches pattern <strong>/{{ condition.data.rule.pattern }}/</strong>
           </span>
 
           <span
-            v-if="condition.data.type === 'method'"
+            v-if="condition.data.conditionType === 'method'"
           >
             Request verb is <strong>{{ condition.data.rule.method }}</strong>
           </span>

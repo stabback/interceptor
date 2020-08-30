@@ -1,14 +1,15 @@
 import app from '@server/app';
-import { Condition, ConditionService, ConditionType } from '@server/resources/condition';
-import { Intercept, InterceptService } from '@server/resources/intercept';
+import { ConditionService, ConditionDocument } from '@server/resources/condition';
+import { InterceptService, InterceptDocument } from '@server/resources/intercept';
 import supertest from 'supertest';
+import TestDB from '@server/test.db';
 
 const request = supertest(app);
 
 describe('condition route', () => {
-    beforeEach(() => {
-        ConditionService.items = [];
-    });
+    beforeAll(async () => await TestDB.connect());
+    afterEach(async () => await TestDB.clearDatabase());
+    afterAll(async () => await TestDB.closeDatabase());
 
     describe('GET /condition', () => {
         it('returns a 200', async (done) => {
@@ -24,8 +25,8 @@ describe('condition route', () => {
         });
 
         it('returns a number of items equal to the number of conditions', async (done) => {
-            ConditionService.create(ConditionType.Method,  { method: 'GET' });
-            ConditionService.create(ConditionType.Method,  { method: 'POST' });
+            ConditionService.create('method', { method: 'GET' });
+            ConditionService.create('method', { method: 'POST' });
 
             const res = await request.get('/command/condition');
             expect(res.body.items.length).toBe(2);
@@ -40,10 +41,10 @@ describe('condition route', () => {
     });
 
     describe('POST /condition', () => {
-        let intercept: Intercept;
+        let intercept: InterceptDocument;
 
-        beforeEach(() => {
-            intercept = InterceptService.create('foo');
+        beforeEach(async () => {
+            intercept = await InterceptService.create('foo');
         });
 
         it('returns an error if the intercept param is not present', async (done) => {
@@ -59,15 +60,13 @@ describe('condition route', () => {
         });
 
         it('returns an error if the type param is not present', async (done) => {
-            const res = await request
+            request
                 .post('/command/condition')
                 .send({
                     intercept: intercept.id,
                     rule: 'GET',
-                });
-
-            expect(res.status).toBe(400);
-            done();
+                })
+                .expect(400, done)
         });
 
         it('returns an error if the rule param is not present', async (done) => {
@@ -89,7 +88,9 @@ describe('condition route', () => {
                 .post('/command/condition')
                 .send({
                     intercept: intercept.id,
-                    rule: 'GET',
+                    rule: {
+                        method: 'GET'
+                    },
                     type: 'method',
                 });
 
@@ -102,12 +103,14 @@ describe('condition route', () => {
                 .post('/command/condition')
                 .send({
                     intercept: intercept.id,
-                    rule: 'GET',
-                    type: 'method',
+                    rule: {
+                        method: 'GET'
+                    },
+                    conditionType: 'method',
                 });
 
-            expect(res.body.data.rule).toBe('GET');
-            expect(res.body.data.type).toBe('method');
+            expect(res.body.data.rule).toStrictEqual({ method: 'GET' });
+            expect(res.body.data.conditionType).toBe('method');
             expect(res.status).toBe(201);
             done();
         });
@@ -117,11 +120,14 @@ describe('condition route', () => {
                 .post('/command/condition')
                 .send({
                     intercept: intercept.id,
-                    rule: 'GET',
-                    type: 'method',
+                    rule: {
+                        method: 'GET'
+                    },
+                    conditionType: 'method',
                 });
-
-            expect(intercept.data.conditions.includes(res.body.id)).toBeTruthy();
+            
+            const updatedIntercept = await InterceptService.get(intercept.id) as InterceptDocument;
+            expect(updatedIntercept.conditions.includes(res.body.id)).toBeTruthy();
             done();
         });
     });
@@ -134,7 +140,7 @@ describe('condition route', () => {
         });
 
         it('returns the condition if found', async (done) => {
-            const foo = ConditionService.create(ConditionType.Method, { method: 'GET' });
+            const foo = await ConditionService.create('method', { method: 'GET' });
 
             const res = await request.get(`/command/condition/${foo.id}`);
             expect(res.body.id).toEqual(foo.id);
@@ -143,41 +149,43 @@ describe('condition route', () => {
     });
 
     describe('DELETE /condition/:condition', () => {
-        let foo: Condition;
-        beforeEach(() => {
-            foo = ConditionService.create(ConditionType.Method, { method: 'GET' });
+        let foo: ConditionDocument;
+
+        beforeEach(async () => {
+            foo = await ConditionService.create('method', { method: 'GET' });
         });
-        afterEach(() => {
+        afterEach(async () => {
             // Sanity check to make sure other items aren't being deleted
-            expect(
-                ConditionService.get(foo.id),
-            ).toEqual(foo);
+            const item = await ConditionService.get(foo.id) as ConditionDocument;
+            expect(item.id).toEqual(foo.id);
         });
 
-        it('404s if condition is not found', async (done) => {
-            const res = await request.delete('/command/condition/bar');
-            expect(res.status).toBe(404);
-            done();
+        it('204s if condition is not found', async (done) => {
+            request
+                .delete('/command/condition/abc123def456')
+                .expect(204, done)
         });
 
         it('deletes the condition', async (done) => {
-            const bar = ConditionService.create(ConditionType.Method, { method: 'POST' });
+            const bar = await ConditionService.create('method', { method: 'POST' });
             const res = await request.delete(`/command/condition/${bar.id}`);
             expect(res.status).toBe(204);
-            expect(
-                (await request.get(`/command/condition/${bar.id}`)).status,
-            ).toBe(404);
+
+            const missingCondition = await request.get(`/command/condition/${bar.id}`)
+            expect(missingCondition.status).toBe(404);
             done();
         });
 
         it('removes the condition from all domains', async (done) => {
-            const bar = ConditionService.create(ConditionType.Method, { method: 'POST' });
-            const intercept = InterceptService.create('foo');
-            intercept.addCondition(bar.id);
+            const bar = await ConditionService.create('method', { method: 'POST' });
+            const intercept: InterceptDocument = await InterceptService.create('foo');
+            await intercept.addCondition(bar.id);
 
             const res = await request.delete(`/command/condition/${bar.id}`);
+
+            const updatedIntercept = await InterceptService.get(intercept.id) as InterceptDocument;
             expect(res.status).toBe(204);
-            expect(intercept.data.conditions.includes(bar.id)).toBeFalsy();
+            expect(updatedIntercept.conditions.includes(bar.id)).toBeFalsy();
 
             done();
         });
