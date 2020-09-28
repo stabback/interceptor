@@ -1,1 +1,4 @@
 theme: jekyll-theme-cayman
+title: Interceptor
+description: Better software development by intercepting network requests.
+show_downloads: "false"

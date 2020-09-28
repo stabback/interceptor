@@ -2,6 +2,7 @@
   "name": "interceptor",
   "version": "2.0.0",
   "author": "Josh Stabback <josh.stabback@gmail.com>",
+  "main": "./server/bin/main.ts",
   "scripts": {
     "build": "vue-cli-service build --dest=./dist/client ./client/src/main.ts",
     "lint": "yarn lint:client && yarn lint:server",
@@ -9,12 +10,12 @@
     "clean": "rimraf ./dist",
     "dev": "ts-node bin/dev.ts",
     "dev:client": "vue-cli-service serve --port 3600 ./client/src/main.ts",
-    "dev:server": "cd server && ts-node-dev --poll --respawn --transpile-only -r tsconfig-paths/register ./bin/main.ts",
+    "dev:server": "cd server && ts-node-dev --poll --respawn --transpile-only -r tsconfig-paths/register .",
     "lint:server": "eslint server --fix --ext=ts",
     "lint:client": "vue-cli-service lint ./client/src",
     "lint:client:fix": "vue-cli-service lint ./client/src --fix",
     "lint:fix": "tslint -p tsconfig.json -c tslint.json --fix",
-    "start": "cross-env NODE_ENV=production && cd server && ts-node --transpile-only -r tsconfig-paths/register ./bin/main.ts",
+    "start": "cross-env NODE_ENV=production && ts-node --transpile-only -r tsconfig-paths/register .",
     "test": "yarn test:server",
     "test:server": "cd server && yarn jest --run-in-band"
   },
