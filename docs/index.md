@@ -1,16 +1,12 @@
 # Interceptor
 
+Docs Home | [Understanding](./understanding) | [Tutorial](./tutorial)
+
 ## What is Interceptor?
 
 Interceptor is a tool to help intercept network requests to return desired responses.
 
-## Purpose
-
-When building applications that make API requests (websites, backends, whatever), you usually want to handle various responses.  You may want to ensure a 500 error displays an error correctly, your UI handles different success cases appropriately, or your network layer retries failed requests.
-
-Interceptor allows you to develop and test these scenarios without relying on test code in your application or control of the services your application is talking to.
-
-For more on when to use Interceptor, examples, and best practices, read the [Understanding](./understanding) section.
+For more on what this means, read the [Understanding](./understanding) section.
 
 ## Requirements
 
