@@ -6,6 +6,9 @@ services:
     ports:
       - "8080:8080"
     restart: unless-stopped
+    env_file: ../.env
+    environment:
+      - INTERCEPTOR_MONGO_CONNECTION_URL=$INTERCEPTOR_MONGO_CONNECTION_URL
     networks:
       - app-network
     depends_on:
