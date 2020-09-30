@@ -2,7 +2,7 @@ version: '3.6'
 
 services:
   interceptor:
-    image: "stabback/interceptor:master"
+    image: "stabback/interceptor"
     ports:
       - "8080:8080"
     restart: unless-stopped

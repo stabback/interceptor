@@ -33,7 +33,7 @@ async function main() {
   /**
    * Listen on provided port, on all network interfaces.
    */
-  process.stdout.write(chalk.cyan('\tDatabase ') + chalk.green('Connecting...'));
+  process.stdout.write(chalk.cyan('\tDatabase ') + chalk.yellow('Connecting...'));
 
   try {
     await dbLoader();
@@ -49,7 +49,7 @@ async function main() {
   }
 
 
-  process.stdout.write(chalk.cyan('\tListening') + chalk.green('Starting...'));
+  process.stdout.write(chalk.cyan('\tListening') + chalk.yellow('Starting...'));
   server.listen(port);
 
 
