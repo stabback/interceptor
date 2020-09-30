@@ -6,10 +6,10 @@ import concurrently from 'concurrently';
 
 // tslint:disable: no-trailing-whitespace
 const message = `
-                                           
-   Starting Interceptor                    
-   http://localhost:8080                   
-                                           
+                                                
+   Starting Interceptor in dev mode             
+   http://localhost:8080                        
+                                                
 `;
 const warning = `
    Ignore the Vue startup message.         

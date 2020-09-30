@@ -6,14 +6,15 @@ dotenv.config({
 });
 
 /* eslint-disable no-console,import/first */
+import readline from 'readline';
 import app from '@server/app';
 import http from 'http';
-import chalk from 'chalk'
+import chalk from 'chalk';
 import { dbLoader } from '@server/loaders/db';
 import { normalizePort } from '@server/utils/normalize-port/normalize-port';
 
 async function main() {
-  console.log(chalk.bold.cyan('Starting Interceptor...'))
+  console.log(chalk.bold.cyan('Starting Interceptor...'));
 
   /**
    * Get port from environment and store in Express.
@@ -21,35 +22,35 @@ async function main() {
   const port = normalizePort(process.env.PORT || '8080');
   app.set('port', port);
 
-  console.log(chalk.cyan('\tPort '), chalk.green(port))
+  console.log(chalk.cyan('\tPort '), chalk.green(port));
 
   /**
    * Create HTTP server.
    */
   const server = http.createServer(app);
-  console.log(chalk.cyan('\tServer '), chalk.green('Created'))
+  console.log(chalk.cyan('\tServer '), chalk.green('Created'));
 
   /**
    * Listen on provided port, on all network interfaces.
    */
-  process.stdout.write(chalk.cyan('\tDatabase ') + chalk.green('Connecting...'))
+  process.stdout.write(chalk.cyan('\tDatabase ') + chalk.green('Connecting...'));
 
   try {
     await dbLoader();
-    process.stdout.clearLine(0);
-    process.stdout.cursorTo(0)
-    process.stdout.write(chalk.cyan('\tDatabase', chalk.green('Connected')) + '\n')
+    readline.clearLine(process.stdout, (0));
+    readline.cursorTo(process.stdout, 0);
+    process.stdout.write(`${chalk.cyan('\tDatabase', chalk.green('Connected'))}\n`);
   } catch (e) {
-    process.stdout.clearLine(0);
-    process.stdout.cursorTo(0)
-    process.stdout.write(chalk.cyan('\tDatabase', chalk.red.bold('Failed')) + '\n')
+    readline.clearLine(process.stdout, (0));
+    readline.cursorTo(process.stdout, 0);
+    process.stdout.write(`${chalk.cyan('\tDatabase', chalk.red.bold('Failed'))}\n`);
     console.error(e);
     process.exit(1);
   }
 
 
-  process.stdout.write(chalk.cyan('\tListening') + chalk.green('Starting...'))
-  server.listen(port)
+  process.stdout.write(chalk.cyan('\tListening') + chalk.green('Starting...'));
+  server.listen(port);
 
 
   server.on('error', (error: NodeJS.ErrnoException) => {
@@ -57,9 +58,9 @@ async function main() {
       throw error;
     }
 
-    process.stdout.clearLine(0);
-    process.stdout.cursorTo(0)
-    process.stdout.write(chalk.cyan('\tListening ') + chalk.red.bold('Failed') + '\n')
+    readline.clearLine(process.stdout, (0));
+    readline.cursorTo(process.stdout, 0);
+    process.stdout.write(`${chalk.cyan('\tListening ') + chalk.red.bold('Failed')}\n`);
 
     const bind = typeof port === 'string'
       ? `Pipe ${port}`
@@ -70,11 +71,11 @@ async function main() {
       case 'EACCES':
         console.error(`${bind} requires elevated privileges`);
         process.exit(1);
-
+        break;
       case 'EADDRINUSE':
         console.error(`${bind} is already in use`);
         process.exit(1);
-
+        break;
       default:
         throw error;
     }
@@ -91,14 +92,13 @@ async function main() {
         : `${addr.port}`;
     }
 
-    process.stdout.clearLine(0);
-    process.stdout.cursorTo(0)
-    process.stdout.write(chalk.cyan('\tListening', chalk.green('Listening!')) + '\n')
+    readline.clearLine(process.stdout, (0));
+    readline.cursorTo(process.stdout, 0);
+    process.stdout.write(`${chalk.cyan('\tListening', chalk.green('Listening!'))}\n`);
 
     console.log('');
-    console.log(chalk.green.bold(`Interceptor started on http://localhost:${bind}`))
+    console.log(chalk.green.bold(`Interceptor started on http://localhost:${bind}`));
   });
-
 }
 
-main()
+main();
