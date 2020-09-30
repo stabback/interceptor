@@ -1,6 +1,6 @@
 # Interceptor
 
-[Docs Home](./index) | [Understanding](./understanding) | Tutorial
+[Docs Home](./index) | [Understanding](./understanding) | [Tutorial](./tutorial)
 
 ## Tutorial
 
